@@ -45,7 +45,7 @@ void parse_paren(Chunk *chunk, Source *source) {
 
 void parse_negate(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_SUB)) {
-        EXPR(PREC_NEGATE+1);
+        EXPR(PREC_NEGATE);
         emit_byte(chunk, OP_NEG);
     } else {
         EXPR(PREC_NEGATE+1);
@@ -72,6 +72,7 @@ void parse_multiplication(Chunk *chunk, Source *source) {
 
     EXPR(PREC_MUL+1);
     emit_byte(chunk, op);
+    EXPR(PREC_NONE);
 }
 
 void parse_addition(Chunk *chunk, Source *source) {
@@ -91,6 +92,7 @@ void parse_addition(Chunk *chunk, Source *source) {
 
     EXPR(PREC_ADD+1);
     emit_byte(chunk, op);
+    EXPR(PREC_NONE);
 }
 
 void expression(Chunk *chunk, Source *source, Prec prec) {

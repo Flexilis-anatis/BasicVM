@@ -6,28 +6,29 @@
 // 41st byte, 32nd instruction, pushes the value 3.213 onto the stack
 
 /**
- * @brief simple_op - Print the assembly for a simple instruction
- * @param padding - the amount of digits to pad the index
- * @param ind - the index the instruction is
- * @param name - the name of the instruction
+ * print - Print a string and a new line
+ * @param string - the string to print
  * @returns void
  */
-void simple_op(int padding, size_t ind, const char *name) {
-    printf("%0*lu: %s\n", padding, ind, name);
+void print(const char *string) {
+    const char *c = string;
+    do
+        putchar(*c);
+    while (*c++);
+    putchar('\n');
 }
 
 /**
  * @brief data_op - Print the assembly for an instruction that has args
- * @param padding - the amount of digits to pad the index
- * @param ind - the index the instruction is
+ * @param name - the name of the instruction
  * @param ip - a pointer to an instruction pointer. Will be incremented past data
  * @param chunk - the current chunk of data
- * @param name - the name of the instruction
  * @param args - the amount of arguments to the instruction
  * @returns void
  */
-void data_op(int padding, size_t ind, uint8_t **ip, Chunk *chunk, const char *name, size_t args) {
-    printf("%0*lu: %s ", padding, ind, name);
+void data_op(const char *name, uint8_t **ip, Chunk *chunk, size_t args) {
+    printf(name);
+    putchar(' ');
     vector(unsigned long) nums = NULL;
     while (args--) {
         unsigned long num = extract_number(ip);
@@ -76,39 +77,34 @@ void dis(Chunk *chunk) {
     print_data(chunk);
     printf("--------------------------\n");
 
-    // dirty hack to get the max amount of digits in an instruct index. can be greater than neccessary
-    // with lots of instructs that take args
-    size_t digits, size = vector_size(chunk->data);
-    for(digits = 1; size /= 10; digits++);
-
     size_t ind = 0;
     for(uint8_t *ip = chunk->code; ip < vector_end(chunk->code); ++ip, ++ind) {
-        // print the memory offset
-        printf("(@%lu) ", ip-chunk->code);
+        printf("(@%lu) %lu: ", ind, ip-chunk->code);
+
         switch (*ip) {
             case OP_PUSH:
-                data_op(digits, ind, &ip, chunk, "PUSH", 1);
+                data_op("PUSH", &ip, chunk, 1);
                 break;
             case OP_NEG:
-                simple_op(digits, ind, "NEG");
+                print("NEG");
                 break;
             case OP_ADD:
-                simple_op(digits, ind, "ADD");
+                print("ADD");
                 break;
             case OP_SUB:
-                simple_op(digits, ind, "SUB");
+                print("SUB");
                 break;
             case OP_DIV:
-                simple_op(digits, ind, "DIV");
+                print("DIV");
                 break;
             case OP_MUL:
-                simple_op(digits, ind, "MUL");
+                print("MUL");
                 break;
             case OP_MOD:
-                simple_op(digits, ind, "MOD");
+                print("MOD");
                 break;
             case OP_RETURN:
-                simple_op(digits, ind, "RET");
+                print("RET");
                 break;
             default:
                 printf("UNKNOWN: %u", *ip);
