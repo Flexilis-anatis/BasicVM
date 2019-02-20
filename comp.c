@@ -70,7 +70,7 @@ void parse_multiplication(Chunk *chunk, Source *source) {
     }
     consume(source);
 
-    EXPR(PREC_NONE);
+    EXPR(PREC_MUL+1);
     emit_byte(chunk, op);
 }
 
@@ -89,7 +89,7 @@ void parse_addition(Chunk *chunk, Source *source) {
     }
     consume(source);
 
-    EXPR(PREC_NONE);
+    EXPR(PREC_ADD+1);
     emit_byte(chunk, op);
 }
 
