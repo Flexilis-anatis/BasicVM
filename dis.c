@@ -1,8 +1,8 @@
 #include "dis.h"
 #include <stdio.h>
 
-// Format is (@byte_offset) padded_instruct_number: instruct_names args? (arg_vals)?
-// example: (@41) 0032: PUSH 13 (3.213000)
+// Format is (@byte_offset) instruct_number: instruct_names args? (arg_vals)?
+// example: (@41) 32: PUSH 13 (3.213000)
 // 41st byte, 32nd instruction, pushes the value 3.213 onto the stack
 
 /**
@@ -79,7 +79,7 @@ void dis(Chunk *chunk) {
 
     size_t ind = 0;
     for(uint8_t *ip = chunk->code; ip < vector_end(chunk->code); ++ip, ++ind) {
-        printf("(@%lu) %lu: ", ind, ip-chunk->code);
+        printf("(@%lu) %lu: ", ip-chunk->code, ind);
 
         switch (*ip) {
             case OP_PUSH:
