@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "vec/vector.h"
 #include "value.h"
+#include "token.h"
 
 typedef enum {
     OP_PUSH, OP_NEG, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_PRINT, OP_RETURN,
@@ -12,6 +13,7 @@ typedef enum {
 // A chunk of code
 typedef struct {
     vector(uint8_t) code;
+    vector(Lex) idents;
     vector(Value) data;
 } Chunk;
 

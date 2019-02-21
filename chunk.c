@@ -14,6 +14,7 @@ Chunk empty_chunk(void) {
 void free_chunk(Chunk *chunk) {
     vector_free(chunk->code);
     vector_free(chunk->data);
+    vector_free(chunk->idents);
 }
 
 void emit_byte(Chunk *chunk, uint8_t byte) {

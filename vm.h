@@ -1,11 +1,14 @@
 #pragma once
 #include "chunk.h"
+#include "token.h"
 #include "ht/hashtable.h"
 
-typedef struct scope_struct_name {
+typedef struct _sSCope {
     vector(Value) stack;
     hash_table *local_vars;
-    struct scope_struct_name *parent_scope;
+
+    struct _sScope *parent;
+
     Chunk *chunk;
     uint8_t *ip;
 } Scope;

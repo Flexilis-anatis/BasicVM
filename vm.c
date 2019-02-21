@@ -9,7 +9,7 @@ Scope *init_scope(Chunk *chunk) {
 
     scope->chunk = chunk;
     scope->stack = NULL;
-    scope->parent_scope = NULL;
+    scope->parent = NULL;
     scope->ip = chunk->code;
 
     scope->local_vars = malloc(sizeof(hash_table));

@@ -1,6 +1,14 @@
 #include "funcs.h"
 #include "value.h"
+#include "token.h"
 #include <math.h>
+
+#define RUNTIME_ERROR(m,c) \
+    do {                                   \
+        fprintf(stderr,                    \
+              "Runtime error: %s\n", (m)); \
+        exit(c);                           \
+    } while (0)
 
 void push_val(Scope *scope, Value value) {
     vector_push_back(scope->stack, value);
@@ -63,7 +71,44 @@ void op_cond_jmp(Scope *scope) {
     free_value(cond);
 }
 
-static void store(Scope *scope, char *key, size_t key_size, Value value) {
+static void store(Scope *scope, const char *key, size_t key_size, Value value) {
     ht_insert(scope->local_vars, key, key_size, value);
+    vector_push_back(scope->stack, value);
 }
 
+static Lex get_ident(Scope *scope) {
+    size_t ident_key = extract_number(&scope->ip);
+    Lex ident = scope->chunk->idents[ident_key];
+    return ident;
+}
+
+void op_store(Scope *scope) {
+    Lex ident = get_ident(scope);
+    size_t size = ident.end-ident.start;
+
+    store(scope, ident.start, size, last_val(scope));
+}
+
+void op_const_store(Scope *scope) {
+    Lex ident = get_ident(scope);
+    size_t size = ident.end-ident.start;
+
+    size_t value_key = extract_number(&scope->ip);
+    store(scope, ident.start, size, scope->chunk->data[value_key]);
+}
+
+void op_load(Scope *scope) {
+    Lex ident = get_ident(scope);
+    size_t size = ident.end-ident.start;
+
+    Scope *cur_scope = scope;
+    Value *result;
+    while (result == NULL && cur_scope != NULL) {
+        result = ht_get(cur_scope->local_vars, ident.start, size);
+        cur_scope = cur_scope->parent;
+    }
+    if (result == NULL)
+        RUNTIME_ERROR("Variable not found", -8);
+    else
+        push_val(scope, *result);
+}

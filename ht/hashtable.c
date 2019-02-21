@@ -18,7 +18,7 @@ uint32_t global_seed = 2976579765;
 /// The hash entry struct. Acts as a node in a linked list.
 struct hash_entry {
     /// A pointer to the key.
-    char *key;
+    const char *key;
 
     /// A value.
     Value value;
@@ -46,7 +46,7 @@ struct hash_entry {
 /// @param value A pointer to the value.
 /// @param value_size The size of the value in bytes.
 /// @returns A pointer to the hash entry.
-hash_entry *he_create(char *key, size_t key_size, Value value);
+hash_entry *he_create(const char *key, size_t key_size, Value value);
 
 /// @brief Destroys the hash entry and frees all associated memory.
 /// @param flags The hash table flags.
@@ -150,7 +150,7 @@ void ht_free(hash_table *table) {
     free(table);
 }
 
-void ht_insert(hash_table *table, char *key, size_t key_size, Value value)
+void ht_insert(hash_table *table, const char *key, size_t key_size, Value value)
 {
     hash_entry *entry = he_create(key, key_size, value);
 
@@ -212,7 +212,7 @@ void ht_insert_he(hash_table *table, hash_entry *entry){
     }
 }
 
-Value *ht_get(hash_table *table, char *key, size_t key_size)
+Value *ht_get(hash_table *table, const char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -237,7 +237,7 @@ Value *ht_get(hash_table *table, char *key, size_t key_size)
     return NULL;
 }
 
-void ht_remove(hash_table *table, char *key, size_t key_size)
+void ht_remove(hash_table *table, const char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -274,7 +274,7 @@ void ht_remove(hash_table *table, char *key, size_t key_size)
     }
 }
 
-int ht_contains(hash_table *table, char *key, size_t key_size)
+int ht_contains(hash_table *table, const char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -299,9 +299,9 @@ unsigned int ht_size(hash_table *table)
     return table->key_count;
 }
 
-void** ht_keys(hash_table *table, unsigned int *key_count)
+const char **ht_keys(hash_table *table, unsigned int *key_count)
 {
-    void **ret;
+    const char **ret;
 
     if(table->key_count == 0){
       *key_count = 0;
@@ -339,7 +339,7 @@ void ht_clear(hash_table *table)
     ht_init(table, table->max_load_factor, table->free_func);
 }
 
-unsigned int ht_index(hash_table *table, char *key, size_t key_size)
+unsigned int ht_index(hash_table *table, const char *key, size_t key_size)
 {
     uint32_t index;
     // 32 bits of murmur seems to fare pretty well
@@ -403,7 +403,7 @@ void ht_set_seed(uint32_t seed){
 // hash_entry functions
 //---------------------------------
 
-hash_entry *he_create(char *key, size_t key_size, Value value)
+hash_entry *he_create(const char *key, size_t key_size, Value value)
 {
     hash_entry *entry = malloc(sizeof(*entry));
     if(entry == NULL) {
@@ -420,15 +420,14 @@ hash_entry *he_create(char *key, size_t key_size, Value value)
 
 void he_destroy(hash_entry *entry, void(*free_func)(void *))
 {
-    free(entry->key);
     free_func(&entry->value);
     free(entry);
 }
 
 int he_key_compare(hash_entry *e1, hash_entry *e2)
 {
-    char *k1 = e1->key;
-    char *k2 = e2->key;
+    const char *k1 = e1->key;
+    const char *k2 = e2->key;
 
     if(e1->key_size != e2->key_size)
         return 0;

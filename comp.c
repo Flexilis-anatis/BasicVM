@@ -1,5 +1,6 @@
 #include "comp.h"
 #include <stdio.h>
+#include <string.h>
 #define EXPR(prec) expression(chunk, source, prec)
 #define ERROR(msg, code) \
     do {                      \
@@ -23,6 +24,20 @@ static void emit_constant(Chunk *chunk, Value constant) {
     emit_value(chunk, constant);
 }
 
+static void emit_ident(Chunk *chunk, Lex ident) {
+    // Check to see if it's a repeat ident
+    for (size_t i = 0; i < vector_size(chunk->idents); ++i) {
+        Lex data = chunk->idents[i];
+        if (data.end - data.start == ident.end - ident.start &&
+            memcmp(data.start, ident.start, data.end - data.start) == 0) {
+            emit_number(chunk, i);
+            return;
+        }
+    }
+    vector_push_back(chunk->idents, ident);
+    emit_number(chunk, vector_size(chunk->idents)-1);
+}
+
 static void parse_atom(Chunk *chunk, Source *source) {
     if (peek_token(source).id == TOK_NUMBER) {
         Token numtok = next_token(source);
@@ -33,6 +48,9 @@ static void parse_atom(Chunk *chunk, Source *source) {
     } else if (peek_token(source).id == TOK_STRING) {
         emit_byte(chunk, OP_PUSH);
         emit_constant(chunk, string_val(next_token(source).lex.start));
+    } else if (peek_token(source).id == TOK_IDENT) {
+        emit_byte(chunk, OP_LOAD);
+        emit_ident(chunk, next_token(source).lex);
     }
 }
 
@@ -98,6 +116,7 @@ static void parse_addition(Chunk *chunk, Source *source) {
     EXPR(PREC_NONE);
 }
 
+#define EXPR_ENDER(id) ((id) == TOK_SEMICOLON || (id) == TOK_RPAREN || (id) == TOK_COMMA)
 static void parse_assignment(Chunk *chunk, Source *source) {
     // Is there an identifier?
     if (peek_token(source).id == TOK_IDENT) {
@@ -105,21 +124,27 @@ static void parse_assignment(Chunk *chunk, Source *source) {
         Token var = next_token(source);
         // Is there an equals sign?
         if (match_token(source, TOK_ASSIGN)) {
-            // Is the next token a number?
-            if (peek_token(source).id == TOK_NUMBER) {
-                Token num = next_token(source);
-                size_t index = write_value(chunk, double_val(strtod(num.lex.start, NULL)));
+            // Is the next token a number or string?
+            bool is_number = peek_token(source).id == TOK_NUMBER;
+            if (is_number || peek_token(source).id == TOK_STRING) {
+                Token val = next_token(source);
+                Value value = is_number ? double_val(strtod(val.lex.start, NULL)) : 
+                                          string_val(val.lex.start);
+                size_t index = write_value(chunk, value);
 
-                // If it's just a number and a semicolon, you can load it directly
-                if (peek_token(source).id == TOK_SEMICOLON) {
+                // If it's just a number and a expr-ender, you can load it directly
+                if (EXPR_ENDER(peek_token(source).id)) {
                     emit_byte(chunk, OP_CONST_STORE);
+                    emit_ident(chunk, var.lex);
                     emit_number(chunk, index);
                 }
                 // Otherwise you have to evaluate it
                 else {
+                    emit_byte(chunk, OP_PUSH);
                     emit_number(chunk, index);
                     EXPR(PREC_NONE);
                     emit_byte(chunk, OP_STORE);
+                    emit_ident(chunk, var.lex);
                 }
             } else {
                 EXPR(PREC_NONE);
@@ -127,7 +152,8 @@ static void parse_assignment(Chunk *chunk, Source *source) {
             }
         } else {
             emit_byte(chunk, OP_LOAD);
-            emit_value(chunk, string_val(delexify(var.lex)));
+            emit_ident(chunk, var.lex);
+            parse_addition(chunk, source);
         }
     } else {
         parse_addition(chunk, source);

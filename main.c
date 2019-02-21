@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <readline/readline.h>
 
+/**/
+
 int main(void) {
     //char *expr = readline("EXPR> ");
-    char *expr = "print \"num\", 3;";
+    char *expr = "print (x = 4) + 3;";
     Chunk chunk = compile(expr);
-
-    dis(&chunk);
     
     Scope *scope = init_scope(&chunk);
     VM *vm = init_vm(scope);

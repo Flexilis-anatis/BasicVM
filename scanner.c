@@ -61,6 +61,7 @@ static Token parse_other(Source *source) {
         CASE('/', DIV);
         CASE('%', MOD);
         CASE(';', SEMICOLON);
+        CASE('=', ASSIGN);
         CASE(',', COMMA);
         default:
             return parse_ident(source);
