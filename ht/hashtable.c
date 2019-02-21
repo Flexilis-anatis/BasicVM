@@ -18,16 +18,13 @@ uint32_t global_seed = 2976579765;
 /// The hash entry struct. Acts as a node in a linked list.
 struct hash_entry {
     /// A pointer to the key.
-    void *key;
+    char *key;
 
-    /// A pointer to the value.
-    void *value;
+    /// A value.
+    Value value;
 
     /// The size of the key in bytes.
     size_t key_size;
-
-    /// The size of the value in bytes.
-    size_t value_size;
 
     /// A pointer to the next hash entry in the chain (or NULL if none).
     /// This is used for collision resolution.
@@ -49,13 +46,12 @@ struct hash_entry {
 /// @param value A pointer to the value.
 /// @param value_size The size of the value in bytes.
 /// @returns A pointer to the hash entry.
-hash_entry *he_create(int flags, void *key, size_t key_size, void *value,
-        size_t value_size);
+hash_entry *he_create(char *key, size_t key_size, Value value);
 
 /// @brief Destroys the hash entry and frees all associated memory.
 /// @param flags The hash table flags.
 /// @param hash_entry A pointer to the hash entry.
-void he_destroy(int flags, hash_entry *entry, void (*free_func)(void *));
+void he_destroy(hash_entry *entry, void (*free_func)(void *));
 
 /// @brief Compare two hash entries.
 /// @param e1 A pointer to the first entry.
@@ -69,35 +65,24 @@ int he_key_compare(hash_entry *e1, hash_entry *e2);
 /// @param entry A pointer to the hash entry.
 /// @param value A pointer to the new value.
 /// @param value_size The size of the new value in bytes.
-void he_set_value(int flags, hash_entry *entry, void *value, size_t value_size);
+void he_set_value(hash_entry *entry, Value value);
 
-hash_entry he_copy(hash_entry *source, size_t value_size, void *(*copy_func)(void *)) {
+hash_entry he_copy(hash_entry *source, Value(*copy_func)(Value)) {
     hash_entry new_entry = *source;
-    new_entry.value = malloc(value_size);
-    void *tmp = copy_func(source->value);
-
-    memcpy(new_entry.value, tmp, value_size);
-    if (new_entry.next) {
-        new_entry.next = malloc(value_size);
-        hash_entry tmp = he_copy(source->next, value_size, copy_func);
-        memcpy(new_entry.next, &tmp, sizeof(hash_entry));
-    }
-
-    free(tmp);
-
+    new_entry.value = copy_func(source->value);
     return new_entry;
 }
 
-hash_table ht_copy(hash_table *source, size_t value_size, void *(*copy_func)(void *)) {
+hash_table ht_copy(hash_table *source, Value(*copy_func)(Value)) {
     hash_table new = *source;
-    new.array = malloc(source->array_size * value_size);
+    new.array = malloc(source->array_size * sizeof(Value));
     for (unsigned int index = 0; index < source->array_size; ++index) {
         if (source->array[index] == NULL) {
             new.array[index] = NULL;
             continue;
         }
         new.array[index] = malloc(sizeof(hash_entry));
-        hash_entry tmp = he_copy(source->array[index], value_size, copy_func);
+        hash_entry tmp = he_copy(source->array[index], copy_func);
         memcpy(new.array[index], &tmp, sizeof(hash_entry));
     }
     return new;
@@ -107,7 +92,7 @@ hash_table ht_copy(hash_table *source, size_t value_size, void *(*copy_func)(voi
 // HashTable functions
 //-----------------------------------
 
-void ht_init(hash_table *table, ht_flags flags, double max_load_factor, void (*free_func)(void *))
+void ht_init(hash_table *table, double max_load_factor, void (*free_func)(void *))
 {
     table->hashfunc_x86_32  = MurmurHash3_x86_32;
     table->hashfunc_x86_128 = MurmurHash3_x86_128;
@@ -118,7 +103,7 @@ void ht_init(hash_table *table, ht_flags flags, double max_load_factor, void (*f
 
     table->key_count            = 0;
     table->collisions           = 0;
-    table->flags                = flags;
+    table->flags                = 0;
     table->max_load_factor      = max_load_factor;
     table->current_load_factor  = 0.0;
 
@@ -145,7 +130,7 @@ void ht_destroy(hash_table *table)
 
         while(entry != NULL) {
             tmp = entry->next;
-            he_destroy(table->flags, entry, table->free_func);
+            he_destroy(entry, table->free_func);
             entry = tmp;
         }
     }
@@ -165,11 +150,9 @@ void ht_free(hash_table *table) {
     free(table);
 }
 
-void ht_insert(hash_table *table, void *key, size_t key_size, void *value,
-        size_t value_size)
+void ht_insert(hash_table *table, char *key, size_t key_size, Value value)
 {
-    hash_entry *entry = he_create(table->flags, key, key_size, value,
-            value_size);
+    hash_entry *entry = he_create(key, key_size, value);
 
     ht_insert_he(table, entry);
 }
@@ -207,8 +190,8 @@ void ht_insert_he(hash_table *table, hash_entry *entry){
     {
         // if the keys are identical, throw away the old entry
         // and stick the new one into the table
-        he_set_value(table->flags, tmp, entry->value, entry->value_size);
-        he_destroy(table->flags, entry, table->free_func);
+        he_set_value(tmp, entry->value);
+        he_destroy(entry, table->free_func);
     }
     else
     {
@@ -229,7 +212,7 @@ void ht_insert_he(hash_table *table, hash_entry *entry){
     }
 }
 
-void* ht_get(hash_table *table, void *key, size_t key_size, size_t *value_size)
+Value *ht_get(hash_table *table, char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -243,10 +226,7 @@ void* ht_get(hash_table *table, void *key, size_t key_size, size_t *value_size)
     {
         if(he_key_compare(entry, &tmp))
         {
-            if(value_size != NULL)
-                *value_size = entry->value_size;
-
-            return entry->value;
+            return &entry->value;
         }
         else
         {
@@ -257,7 +237,7 @@ void* ht_get(hash_table *table, void *key, size_t key_size, size_t *value_size)
     return NULL;
 }
 
-void ht_remove(hash_table *table, void *key, size_t key_size)
+void ht_remove(hash_table *table, char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -283,7 +263,7 @@ void ht_remove(hash_table *table, void *key, size_t key_size)
             if(prev != NULL)
               table->collisions--;
 
-            he_destroy(table->flags, entry, table->free_func);
+            he_destroy(entry, table->free_func);
             return;
         }
         else
@@ -294,7 +274,7 @@ void ht_remove(hash_table *table, void *key, size_t key_size)
     }
 }
 
-int ht_contains(hash_table *table, void *key, size_t key_size)
+int ht_contains(hash_table *table, char *key, size_t key_size)
 {
     unsigned int index  = ht_index(table, key, key_size);
     hash_entry *entry   = table->array[index];
@@ -356,10 +336,10 @@ void ht_clear(hash_table *table)
 {
     ht_destroy(table);
 
-    ht_init(table, table->flags, table->max_load_factor, table->free_func);
+    ht_init(table, table->max_load_factor, table->free_func);
 }
 
-unsigned int ht_index(hash_table *table, void *key, size_t key_size)
+unsigned int ht_index(hash_table *table, char *key, size_t key_size)
 {
     uint32_t index;
     // 32 bits of murmur seems to fare pretty well
@@ -423,54 +403,25 @@ void ht_set_seed(uint32_t seed){
 // hash_entry functions
 //---------------------------------
 
-hash_entry *he_create(int flags, void *key, size_t key_size, void *value,
-        size_t value_size)
+hash_entry *he_create(char *key, size_t key_size, Value value)
 {
     hash_entry *entry = malloc(sizeof(*entry));
     if(entry == NULL) {
         return NULL;
     }
 
+    entry->key = key;
     entry->key_size = key_size;
-    if (flags & HT_KEY_CONST){
-        entry->key = key;
-    }
-    else {
-        entry->key = malloc(key_size);
-        if(entry->key == NULL) {
-            free(entry);
-            return NULL;
-        }
-        memcpy(entry->key, key, key_size);
-    }
-
-    entry->value_size = value_size;
-    if (flags & HT_VALUE_CONST){
-        entry->value = value;
-    }
-    else {
-        entry->value = malloc(value_size);
-        if(entry->value == NULL) {
-            free(entry->key);
-            free(entry);
-            return NULL;
-        }
-        memcpy(entry->value, value, value_size);
-    }
-
+    entry->value = value;
     entry->next = NULL;
 
     return entry;
 }
 
-void he_destroy(int flags, hash_entry *entry, void (*free_func)(void *))
+void he_destroy(hash_entry *entry, void(*free_func)(void *))
 {
-    if (!(flags & HT_KEY_CONST))
-        free(entry->key);
-    if (!(flags & HT_VALUE_CONST)) {
-        free_func(entry->value);
-        free(entry->value);
-    }
+    free(entry->key);
+    free_func(&entry->value);
     free(entry);
 }
 
@@ -485,22 +436,9 @@ int he_key_compare(hash_entry *e1, hash_entry *e2)
     return (memcmp(k1,k2,e1->key_size) == 0);
 }
 
-void he_set_value(int flags, hash_entry *entry, void *value, size_t value_size)
+void he_set_value(hash_entry *entry, Value value)
 {
-    if (!(flags & HT_VALUE_CONST)) {
-        if(entry->value)
-            free(entry->value);
-
-        entry->value = malloc(value_size);
-        if(entry->value == NULL) {
-            return;
-        }
-        memcpy(entry->value, value, value_size);
-    } else {
-        entry->value = value;
-    }
-    entry->value_size = value_size;
-
+    entry->value = value;
     return;
 }
 

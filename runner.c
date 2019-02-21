@@ -24,6 +24,18 @@ bool run_next(Scope *scope) {
             scope->stack[vector_size(scope->stack)-1].d *= -1;
             break;
 
+        case OP_LOAD:
+            op_load(scope);
+            break;
+
+        case OP_STORE:
+            op_store(scope);
+            break;
+
+        case OP_CONST_STORE:
+            op_const_store(scope);
+            break;
+
         case OP_PRINT:
             op_print(scope);
             break;

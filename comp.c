@@ -164,6 +164,7 @@ static bool printstmt(Chunk *chunk, Source *source) {
         do {
             EXPR(PREC_NONE);
             emit_byte(chunk, OP_PRINT);
+            
             if (peek_token(source).id == TOK_SEMICOLON) {
                 trailing_comma = false;
                 break;

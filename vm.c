@@ -13,7 +13,7 @@ Scope *init_scope(Chunk *chunk) {
     scope->ip = chunk->code;
 
     scope->local_vars = malloc(sizeof(hash_table));
-    ht_init(scope->local_vars, 0, 0.03, free_value_voidp);
+    ht_init(scope->local_vars, 0.03, free_value_voidp);
 
     return scope;
 }

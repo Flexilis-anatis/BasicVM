@@ -1,4 +1,5 @@
 #include "funcs.h"
+#include "value.h"
 #include <math.h>
 
 void push_val(Scope *scope, Value value) {
@@ -61,3 +62,8 @@ void op_cond_jmp(Scope *scope) {
         op_const_jmp(scope);
     free_value(cond);
 }
+
+static void store(Scope *scope, char *key, size_t key_size, Value value) {
+    ht_insert(scope->local_vars, key, key_size, value);
+}
+

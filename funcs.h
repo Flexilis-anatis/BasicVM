@@ -19,4 +19,7 @@ F(print);
 F(puts);
 F(const_jmp);
 F(cond_jmp);
+F(const_store);
+F(store);
+F(load);
 #undef F
