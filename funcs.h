@@ -3,6 +3,8 @@
 Value last_val(Scope *);
 void push_val(Scope *, Value);
 Value get_val(Scope *);
+void pop_back(Scope *);
+Value pop(Scope *);
 
 // defines multi-line functions for the VM 
 
@@ -13,4 +15,7 @@ F(sub);
 F(mul);
 F(div);
 F(mod);
+F(print);
+F(const_jmp);
+F(cond_jmp);
 #undef F

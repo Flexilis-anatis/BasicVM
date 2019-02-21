@@ -10,12 +10,8 @@
  * @param string - the string to print
  * @returns void
  */
-void print(const char *string) {
-    const char *c = string;
-    do
-        putchar(*c);
-    while (*c++);
-    putchar('\n');
+static void print(const char *string) {
+    printf("%s\n", string);
 }
 
 /**
@@ -26,13 +22,14 @@ void print(const char *string) {
  * @param args - the amount of arguments to the instruction
  * @returns void
  */
-void data_op(const char *name, uint8_t **ip, Chunk *chunk, size_t args) {
+static void data_op(const char *name, uint8_t **ip, Chunk *chunk, size_t args) {
     printf(name);
     putchar(' ');
+    ++*ip; // get to data
     vector(unsigned long) nums = NULL;
     while (args--) {
         unsigned long num = extract_number(ip);
-        (*ip)--;
+        --*ip;
         vector_push_back(nums, num);
         printf("%lu ", num);
     }
@@ -48,11 +45,30 @@ void data_op(const char *name, uint8_t **ip, Chunk *chunk, size_t args) {
 }
 
 /**
+ * @brief const_data_op - Print an assembly instruction containing a plain number
+ * @param name - the name of the instruction
+ * @param ip - a pointer to an instruction pointer. Will be incremented past data
+ * @param args - the amount of arguments to the instruction
+ * @returns void
+ */
+static void const_data_op(const char *name, uint8_t **ip, size_t args) {
+    printf(name);
+    putchar(' ');
+    ++*ip; // get to data
+    while (args--) {
+        long num = (long)extract_number(ip);
+        printf("%li", num);
+        --*ip;
+    }
+    putchar('\n');
+}
+
+/**
  * @brief print_data - print the constants of a chunk
  * @param chunk - the chunk to print the data of
  * @returns void
  */
-void print_data(Chunk *chunk) {
+static void print_data(Chunk *chunk) {
     putchar('[');
     // Don't want a trailing comma, but don't want to segfault on empty constant pools either (VERY unlikely)
     if (vector_size(chunk->data)) {
@@ -64,7 +80,7 @@ void print_data(Chunk *chunk) {
         printf("(%lu) ", vector_size(chunk->data)-1);
         print_value(*(vector_end(chunk->data)-1));
     }
-    printf("]\n");
+    print("]");
 }
 
 /**
@@ -85,6 +101,17 @@ void dis(Chunk *chunk) {
             case OP_PUSH:
                 data_op("PUSH", &ip, chunk, 1);
                 break;
+            case OP_CONST_JMP:
+            case OP_COND_JMP:
+                // Const JMP and Variable JMP
+                const_data_op(*ip == OP_CONST_JMP ? "JMP" : "POPJMP", &ip, 1);
+                break;
+            case OP_PRINT:
+                print("PRINT");
+                break;
+            case OP_POP_TOP:
+                print("POP");
+                break;
             case OP_NEG:
                 print("NEG");
                 break;
@@ -98,7 +125,7 @@ void dis(Chunk *chunk) {
                 print("DIV");
                 break;
             case OP_MUL:
-                print("MUL");
+                print("MULT");
                 break;
             case OP_MOD:
                 print("MOD");
@@ -107,7 +134,7 @@ void dis(Chunk *chunk) {
                 print("RET");
                 break;
             default:
-                printf("UNKNOWN: %u", *ip);
+                printf("UNKNOWN: %u\n", *ip);
                 break;
         }
     }

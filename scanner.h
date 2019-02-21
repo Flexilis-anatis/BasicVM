@@ -27,3 +27,5 @@ Token peek_token(Source *source);
 
 // If the next token matches a certain ID, advance over it and return true. Otherwise return false
 bool match_token(Source *source, TokID tomatch);
+
+char *delexify(Lex lex);

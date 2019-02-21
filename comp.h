@@ -6,6 +6,7 @@
 // Good way to disable features, I guess
 typedef enum {
     PREC_NONE,
+    PREC_ASSIGN,
     PREC_ADD,
     PREC_MUL,
     PREC_NEGATE,

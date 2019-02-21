@@ -12,6 +12,8 @@ void run_scope(Scope *scope) {
 
 // Run the next instruction
 bool run_next(Scope *scope) {
+    if (scope->ip >= vector_end(scope->chunk->code))
+        return false;
     uint8_t instr = *(scope->ip++);
     switch (instr) {
         case OP_PUSH:
@@ -20,7 +22,11 @@ bool run_next(Scope *scope) {
 
         case OP_NEG:
             // One liners are fine
-            scope->stack[vector_size(scope->stack)-1] *= -1;
+            scope->stack[vector_size(scope->stack)-1].d *= -1;
+            break;
+
+        case OP_PRINT:
+            op_print(scope);
             break;
 
         case OP_ADD:
@@ -41,6 +47,18 @@ bool run_next(Scope *scope) {
 
         case OP_MUL:
             op_mul(scope);
+            break;
+
+        case OP_COND_JMP:
+            op_cond_jmp(scope);
+            break;
+
+        case OP_CONST_JMP:
+            op_const_jmp(scope);
+            break;
+
+        case OP_POP_TOP:
+            pop_back(scope);
             break;
 
         case OP_RETURN: // again, just extendability

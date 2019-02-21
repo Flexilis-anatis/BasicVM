@@ -5,19 +5,19 @@
 #include <readline/readline.h>
 
 int main(void) {
-    char *expr = readline("EXPR> ");
+    //char *expr = readline("EXPR> ");
+    char *expr = "print 2/3/4;";
     Chunk chunk = compile(expr);
-    emit_byte(&chunk, OP_RETURN);
 
     dis(&chunk);
-
+    
     Scope *scope = init_scope(&chunk);
     VM *vm = init_vm(scope);
 
     run_vm(vm);
     
     free_vm(vm);
-    free(expr);
+    //free(expr);
 
     return 0;
 }

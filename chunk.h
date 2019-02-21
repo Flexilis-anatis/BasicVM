@@ -5,6 +5,7 @@
 
 typedef enum {
     OP_PUSH, OP_NEG, OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_PRINT, OP_RETURN,
+    OP_POP_TOP, OP_CONST_JMP, OP_COND_JMP, OP_LOAD, OP_STORE, OP_CONST_STORE, 
 } OpCode;
 
 // A chunk of code

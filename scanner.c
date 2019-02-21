@@ -1,6 +1,6 @@
 #include "scanner.h"
 #include "vec/vector.h"
-#include <assert.h>
+#include <string.h>
 
 Source init_source(const char *source) {
     Source s;
@@ -17,7 +17,12 @@ static Token token(TokID type, Source *source) {
     return tok;
 }
 
-#define ISDIGIT(x) (((x) >= '0' && (x) <= '9') || (x) == '.')
+#define INRANGE(x,l,h) ((x) >= l && (x) <= h)
+#define ISIDENTCHAR(x) (INRANGE((x), 'a', 'z') || \
+                        INRANGE((x), 'A', 'Z') || \
+                        INRANGE((x), '0', '9') || \
+                        (x) == '_')
+#define ISDIGIT(x) (INRANGE((x),'0','9') || (x) == '.')
 
 static Token parse_number(Source *source) {
     while (ISDIGIT(*source->end))
@@ -26,6 +31,23 @@ static Token parse_number(Source *source) {
     return token(TOK_NUMBER, source);
 }
 
+static Token match_kwd(const char *string, size_t length, Source *source, TokID tok) {
+    if (source->start+length+1 == source->end &&
+        memcmp(source->start+1, string, length) == 0)
+        return token(tok, source);
+    return token(TOK_IDENT, source);
+}
+
+static Token parse_ident(Source *source) {
+    while(ISIDENTCHAR(*source->end))
+        ++source->end;
+
+    switch (*source->start) {
+        case 'p':
+            return match_kwd("rint", 4, source, TOK_PRINT);
+    }
+    return token(TOK_IDENT, source);
+}
 
 // More macro abuse! :D
 #define CASE(char, type) case char: return token(TOK_##type, source)
@@ -38,8 +60,9 @@ static Token parse_other(Source *source) {
         CASE('*', MUL);
         CASE('/', DIV);
         CASE('%', MOD);
+        CASE(';', SEMICOLON);
         default:
-            return token(TOK_EOF, source);
+            return parse_ident(source);
     }
 }
 #undef CASE
@@ -85,4 +108,27 @@ bool match_token(Source *source, TokID id) {
         return false;
     consume(source);
     return true;
+}
+
+char *delexify(Lex lex) {
+    size_t len = lex.end-lex.start;
+    char *string = malloc(len);
+    size_t current = 0;
+    for (size_t i = 0; i < len; ++i, ++current) {
+        char c = lex.start[i];
+        if (c == '\\') {
+            switch (lex.start[++i]) {
+                case '\\':
+                    string[current] = '\\';
+                    break;
+                case 'n':
+                    string[current] = '\n';
+                    break;
+            }
+        } else {
+            string[current] = c;
+        }
+    }
+    string[len] = '\0';
+    return string;
 }
