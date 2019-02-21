@@ -11,16 +11,16 @@
 static void expression(Chunk *chunk, Source *source, Prec prec);
 
 // Emit a constant. Makes sure it's not a repeat
-static void emit_constant(Chunk *chunk, Value number) {
+static void emit_constant(Chunk *chunk, Value constant) {
     // Check to see if it's a repeat constant
     for (size_t i = 0; i < vector_size(chunk->data); ++i) {
-        if (same_value(chunk->data[i], number)) {
+        if (same_value(chunk->data[i], constant)) {
             emit_number(chunk, i);
             return;
         }
     }
     // If it's not a dup, add it to the data section AND emit it
-    emit_value(chunk, number);
+    emit_value(chunk, constant);
 }
 
 static void parse_atom(Chunk *chunk, Source *source) {
@@ -30,6 +30,9 @@ static void parse_atom(Chunk *chunk, Source *source) {
 
         emit_byte(chunk, OP_PUSH);
         emit_constant(chunk, double_val(number));
+    } else if (peek_token(source).id == TOK_STRING) {
+        emit_byte(chunk, OP_PUSH);
+        emit_constant(chunk, string_val(next_token(source).lex.start));
     }
 }
 
@@ -157,10 +160,23 @@ static void expression(Chunk *chunk, Source *source, Prec prec) {
 
 static bool printstmt(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_PRINT)) {
-        EXPR(PREC_NONE);
+        bool trailing_comma = true;
+        do {
+            EXPR(PREC_NONE);
+            emit_byte(chunk, OP_PRINT);
+            if (peek_token(source).id == TOK_SEMICOLON) {
+                trailing_comma = false;
+                break;
+            }
+        } while (match_token(source, TOK_COMMA) && !(peek_token(source).id == TOK_SEMICOLON));
+
         if (!match_token(source, TOK_SEMICOLON))
-            ERROR("Expected semicolon after print statement", -4);
-        emit_byte(chunk, OP_PRINT);
+            ERROR("Expected semicolon after print statement", -5);
+
+        if (!trailing_comma) {
+            vector_pop_back(chunk->code);
+            emit_byte(chunk, OP_PUTS);
+        }
         return true;
     }
     return false;

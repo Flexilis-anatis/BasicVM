@@ -61,11 +61,26 @@ static Token parse_other(Source *source) {
         CASE('/', DIV);
         CASE('%', MOD);
         CASE(';', SEMICOLON);
+        CASE(',', COMMA);
         default:
             return parse_ident(source);
     }
 }
 #undef CASE
+
+static Token parse_string(Source *source) {
+    ++source->start;
+    char last = '\0';
+    do
+        last = *source->end++;
+    while (*source->end != '"' || last == '\\');
+    
+    Token t = token(TOK_STRING, source);
+    ++source->end;
+    t.lex.start = delexify(t.lex);
+    t.lex.end = t.lex.start-(source->end-source->start);
+    return t;
+}
 
 static Token get_next_token(Source *source) {
     source->start = source->end;
@@ -78,9 +93,10 @@ static Token get_next_token(Source *source) {
     if (*source->end == '\0')
         return token(TOK_EOF, source);
 
-    if (ISDIGIT(*source->end))
+    if (*source->end == '"')
+        return parse_string(source);
+    else if (ISDIGIT(*source->end))
         return parse_number(source);
-
     return parse_other(source);
 }
 
@@ -112,7 +128,7 @@ bool match_token(Source *source, TokID id) {
 
 char *delexify(Lex lex) {
     size_t len = lex.end-lex.start;
-    char *string = malloc(len);
+    char *string = malloc(len+1);
     size_t current = 0;
     for (size_t i = 0; i < len; ++i, ++current) {
         char c = lex.start[i];
@@ -124,11 +140,18 @@ char *delexify(Lex lex) {
                 case 'n':
                     string[current] = '\n';
                     break;
+                case '"':
+                    string[current] = '"';
+                    break;
+                default:
+                    string[current] = '\\';
+                    string[++current] = c;
+                    break;
             }
         } else {
             string[current] = c;
         }
     }
-    string[len] = '\0';
+    string[current] = '\0';
     return string;
 }

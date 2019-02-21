@@ -91,6 +91,10 @@ void ht_init(hash_table *table, ht_flags flags, double max_load_factor, void (*f
 /// @param table A pointer to the hash table.
 void ht_destroy(hash_table *table);
 
+/// @brief Destroys the hash_table struct, frees all relevant memory and the struct itself
+/// @param table - A pointer to the hash table
+void ht_free(hash_table *table);
+
 /// @brief Copys the hash table and everything in it
 /// @param source A pointer to the tash table to copy
 hash_table ht_copy(hash_table *source, size_t value_size, void *(*copy_func)(void *));

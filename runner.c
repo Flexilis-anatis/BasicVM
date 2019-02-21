@@ -21,12 +21,15 @@ bool run_next(Scope *scope) {
             break;
 
         case OP_NEG:
-            // One liners are fine
             scope->stack[vector_size(scope->stack)-1].d *= -1;
             break;
 
         case OP_PRINT:
             op_print(scope);
+            break;
+
+        case OP_PUTS:
+            op_puts(scope);
             break;
 
         case OP_ADD:
@@ -61,7 +64,7 @@ bool run_next(Scope *scope) {
             pop_back(scope);
             break;
 
-        case OP_RETURN: // again, just extendability
+        case OP_RETURN:
             print_value(last_val(scope));
             putchar('\n');
             return false;

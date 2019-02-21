@@ -42,6 +42,12 @@ void op_print(Scope *scope) {
     Value val = pop(scope);
     print_value(val);
     free_value(val);
+    putchar(' ');
+}
+
+void op_puts(Scope *scope) {
+    op_print(scope);
+    putchar('\n');
 }
 
 void op_const_jmp(Scope *scope) {

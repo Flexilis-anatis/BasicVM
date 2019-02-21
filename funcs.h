@@ -16,6 +16,7 @@ F(mul);
 F(div);
 F(mod);
 F(print);
+F(puts);
 F(const_jmp);
 F(cond_jmp);
 #undef F

@@ -160,6 +160,11 @@ void ht_destroy(hash_table *table)
     table->array = NULL;
 }
 
+void ht_free(hash_table *table) {
+    ht_destroy(table);
+    free(table);
+}
+
 void ht_insert(hash_table *table, void *key, size_t key_size, void *value,
         size_t value_size)
 {

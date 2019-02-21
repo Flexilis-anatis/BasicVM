@@ -1,8 +1,11 @@
 #pragma once
 #include "chunk.h"
+#include "ht/hashtable.h"
 
-typedef struct {
+typedef struct scope_struct_name {
     vector(Value) stack;
+    hash_table *local_vars;
+    struct scope_struct_name *parent_scope;
     Chunk *chunk;
     uint8_t *ip;
 } Scope;

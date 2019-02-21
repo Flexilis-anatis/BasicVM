@@ -6,15 +6,6 @@
 // 41st byte, 32nd instruction, pushes the value 3.213 onto the stack
 
 /**
- * print - Print a string and a new line
- * @param string - the string to print
- * @returns void
- */
-static void print(const char *string) {
-    printf("%s\n", string);
-}
-
-/**
  * @brief data_op - Print the assembly for an instruction that has args
  * @param name - the name of the instruction
  * @param ip - a pointer to an instruction pointer. Will be incremented past data
@@ -80,7 +71,7 @@ static void print_data(Chunk *chunk) {
         printf("(%lu) ", vector_size(chunk->data)-1);
         print_value(*(vector_end(chunk->data)-1));
     }
-    print("]");
+    puts("]");
 }
 
 /**
@@ -107,31 +98,34 @@ void dis(Chunk *chunk) {
                 const_data_op(*ip == OP_CONST_JMP ? "JMP" : "POPJMP", &ip, 1);
                 break;
             case OP_PRINT:
-                print("PRINT");
+                puts("PRINT");
+                break;
+            case OP_PUTS:
+                puts("PUTS");
                 break;
             case OP_POP_TOP:
-                print("POP");
+                puts("POP");
                 break;
             case OP_NEG:
-                print("NEG");
+                puts("NEG");
                 break;
             case OP_ADD:
-                print("ADD");
+                puts("ADD");
                 break;
             case OP_SUB:
-                print("SUB");
+                puts("SUB");
                 break;
             case OP_DIV:
-                print("DIV");
+                puts("DIV");
                 break;
             case OP_MUL:
-                print("MULT");
+                puts("MULT");
                 break;
             case OP_MOD:
-                print("MOD");
+                puts("MOD");
                 break;
             case OP_RETURN:
-                print("RET");
+                puts("RET");
                 break;
             default:
                 printf("UNKNOWN: %u\n", *ip);

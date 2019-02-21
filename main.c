@@ -6,7 +6,7 @@
 
 int main(void) {
     //char *expr = readline("EXPR> ");
-    char *expr = "print 2/3/4;";
+    char *expr = "print \"num\", 3;";
     Chunk chunk = compile(expr);
 
     dis(&chunk);

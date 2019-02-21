@@ -79,7 +79,7 @@ Value bool_value(bool cond) {
     return v;
 }
 
-Value string_val(char *string) {
+Value string_val(const char *string) {
     Value v;
     SET_VALUE(v, string);
     SET_TYPE(v, TYPE_STRING);

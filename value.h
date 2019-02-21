@@ -54,4 +54,4 @@ Value double_val(double val);
 void free_value(Value value);
 bool value_true(Value value);
 Value bool_value(bool cond);
-Value string_val(char *string);
+Value string_val(const char *string);
