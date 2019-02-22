@@ -8,9 +8,11 @@
 
 int main(void) {
     //char *expr = readline("EXPR> ");
-    char *expr = "x = 3; if (x) { print \"here\"; }";
+    char *expr = "if (0) print \"here\"; else print \"to\"; ";
     Chunk chunk = compile(expr);
     
+    dis(&chunk);
+
     Scope *scope = init_scope(&chunk);
     VM *vm = init_vm(scope);
 

@@ -2,6 +2,20 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+if (x)
+    print "hey";
+else
+    print "aw";
+
+0 LOAD x
+2 JMP 5
+4 PUSH "hey"
+6 PUTS
+
+
+*/
+
 #define EXPR(prec) expression(chunk, source, prec)
 #define ERROR(msg, code) \
     do {                      \
@@ -47,6 +61,7 @@ static void emit_ident(Chunk *chunk, Lex ident) {
         Lex data = chunk->idents[i];
         if (data.end - data.start == ident.end - ident.start &&
             memcmp(data.start, ident.start, data.end - data.start) == 0) {
+            printf("Found: %lu\n", i);
             emit_number(chunk, i);
             return;
         }
@@ -219,21 +234,23 @@ static bool ifstmt(Chunk *chunk, Source *source) {
 
         emit_byte(chunk, OP_COND_JMP);
 
-        // Write the maximum possible number so we have enough space
+        // Write the maximum possible number so we have enough space (plus one in case we need an else)
         size_t jumps_len = vector_size(chunk->jumps);
         // Save start of data and length of data
         size_t start = vector_size(chunk->code);
-        emit_number(chunk, jumps_len);
+        emit_number(chunk, jumps_len+1);
         size_t data_len = vector_size(chunk->code)-start;
 
+        // Record the body length
         size_t start_body = vector_size(chunk->code);
         parse_block(chunk, source);
         size_t body_len = vector_size(chunk->code)-start_body;
 
-        size_t index = jump_ind(chunk, body_len);
+        bool iselse = match_token(source, TOK_ELSE);
+        size_t index = jump_ind(chunk, body_len+iselse);
 
         // If new data was written
-        if (vector_size(chunk->jumps) - jumps_len == 0) {
+        if (vector_size(chunk->jumps) > jumps_len) {
             Chunk tmp = empty_chunk();
             emit_number(&tmp, index);
             // Zero out old data
@@ -245,6 +262,35 @@ static bool ifstmt(Chunk *chunk, Source *source) {
                 chunk->code[start+i-1] = tmp.code[i-1];
             
             vector_free(tmp.code);
+        }
+
+        if (iselse) {
+            emit_byte(chunk, OP_CONST_JMP);
+            size_t start = vector_size(chunk->code);
+            size_t jumps_len = vector_size(chunk->jumps);
+            emit_number(chunk, jumps_len+1);
+            size_t data_len = vector_size(chunk->code)-start;
+            
+            size_t oldlen = vector_size(chunk->code);
+            parse_block(chunk, source);
+            size_t size = vector_size(chunk->code)-oldlen;
+
+            size_t index = jump_ind(chunk, size);
+
+            if (vector_size(chunk->jumps) > jumps_len) {
+                Chunk tmp = empty_chunk();
+                emit_number(&tmp, index);
+
+                // Zero out old data
+                for (size_t i = 0; i < data_len; ++i)
+                    chunk->code[start+i] = 0;
+
+                // Write in new data
+                for (size_t i = vector_size(tmp.code); i > 0; --i)
+                    chunk->code[start+i-1] = tmp.code[i-1];
+
+                vector_free(tmp.code);
+            }
         }
 
         return true;

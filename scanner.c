@@ -47,6 +47,8 @@ static Token parse_ident(Source *source) {
             return match_kwd("rint", 4, source, TOK_PRINT);
         case 'i':
             return match_kwd("f", 1, source, TOK_IF);
+        case 'e':
+            return match_kwd("lse", 3, source, TOK_ELSE);
     }
     return token(TOK_IDENT, source);
 }
