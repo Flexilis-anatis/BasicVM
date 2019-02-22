@@ -8,7 +8,7 @@
 
 int main(void) {
     //char *expr = readline("EXPR> ");
-    char *expr = "print (x = 4) + 3;";
+    char *expr = "x = 3; if (x) { print \"here\"; }";
     Chunk chunk = compile(expr);
     
     Scope *scope = init_scope(&chunk);

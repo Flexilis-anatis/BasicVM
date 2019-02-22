@@ -15,6 +15,7 @@ typedef struct {
     vector(uint8_t) code;
     vector(Lex) idents;
     vector(Value) data;
+    vector(size_t) jumps;
 } Chunk;
 
 // Initializes vectors to NULL

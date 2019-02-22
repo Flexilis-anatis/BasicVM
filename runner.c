@@ -17,7 +17,7 @@ bool run_next(Scope *scope) {
     uint8_t instr = *(scope->ip++);
     switch (instr) {
         case OP_PUSH:
-            push_val(scope, get_val(scope));
+            push_val(scope, copy_val(get_val(scope)));
             break;
 
         case OP_NEG:

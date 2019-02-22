@@ -8,13 +8,18 @@ Chunk empty_chunk(void) {
     Chunk chunk;
     chunk.code = NULL;
     chunk.data = NULL;
+    chunk.idents = NULL;
+    chunk.jumps = NULL;
     return chunk;
 }
 
 void free_chunk(Chunk *chunk) {
     vector_free(chunk->code);
+    for (size_t i = 0; i < vector_size(chunk->data); ++i)
+        free_value(chunk->data[i]);
     vector_free(chunk->data);
     vector_free(chunk->idents);
+    vector_free(chunk->jumps);
 }
 
 void emit_byte(Chunk *chunk, uint8_t byte) {
@@ -93,4 +98,3 @@ void emit_number(Chunk *chunk, unsigned long number) {
 }
 #undef LAST_BITS
 #undef DROP_BITS
-

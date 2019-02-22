@@ -60,8 +60,8 @@ void op_puts(Scope *scope) {
 }
 
 void op_const_jmp(Scope *scope) {
-    long number = (long)extract_number(&scope->ip);
-    scope->ip += number > 0 ? number : -number;
+    unsigned long index = extract_number(&scope->ip);
+    scope->ip += scope->chunk->jumps[index];
 }
 
 void op_cond_jmp(Scope *scope) {
@@ -102,10 +102,10 @@ void op_load(Scope *scope) {
     size_t size = ident.end-ident.start;
 
     Scope *cur_scope = scope;
-    Value *result;
+    Value *result = NULL;
     while (result == NULL && cur_scope != NULL) {
         result = ht_get(cur_scope->local_vars, ident.start, size);
-        cur_scope = cur_scope->parent;
+        cur_scope = (Scope *)cur_scope->parent;
     }
     if (result == NULL)
         RUNTIME_ERROR("Variable not found", -8);

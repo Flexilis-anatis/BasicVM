@@ -1,15 +1,32 @@
 #include "comp.h"
 #include <stdio.h>
 #include <string.h>
+
 #define EXPR(prec) expression(chunk, source, prec)
 #define ERROR(msg, code) \
     do {                      \
         fprintf(stderr, msg); \
         exit(code);           \
     } while (0)
+#define REQUIRE(tok, msg, code) \
+    do {                               \
+        if (!match_token(source, tok)) \
+            ERROR(msg, code);          \
+    } while (0);
 
-// Similar to a Pratt-parser, but using a switch-case statement
 static void expression(Chunk *chunk, Source *source, Prec prec);
+static void statement(Chunk *chunk, Source *source);
+
+// Get the index of a constant it. Add it if it's not found
+static size_t jump_ind(Chunk *chunk, size_t jump_size) {
+    size_t size = vector_size(chunk->jumps);
+    for (size_t i = 0; i < size; ++i) {
+        if (chunk->jumps[i] == jump_size)
+            return i;
+    }
+    vector_push_back(chunk->jumps, jump_size);
+    return size;
+}
 
 // Emit a constant. Makes sure it's not a repeat
 static void emit_constant(Chunk *chunk, Value constant) {
@@ -47,7 +64,7 @@ static void parse_atom(Chunk *chunk, Source *source) {
         emit_constant(chunk, double_val(number));
     } else if (peek_token(source).id == TOK_STRING) {
         emit_byte(chunk, OP_PUSH);
-        emit_constant(chunk, string_val(next_token(source).lex.start));
+        emit_constant(chunk, string_val((char *)next_token(source).lex.start));
     } else if (peek_token(source).id == TOK_IDENT) {
         emit_byte(chunk, OP_LOAD);
         emit_ident(chunk, next_token(source).lex);
@@ -57,8 +74,7 @@ static void parse_atom(Chunk *chunk, Source *source) {
 static void parse_paren(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_LPAREN)) {
         EXPR(PREC_NONE);
-        if (!match_token(source, TOK_RPAREN))
-            ERROR("No closing parenthesis", -1);
+        REQUIRE(TOK_RPAREN, "No closing parenthesis in expression", -1);
     } else {
         EXPR(PREC_PAREN+1);
     }
@@ -129,7 +145,7 @@ static void parse_assignment(Chunk *chunk, Source *source) {
             if (is_number || peek_token(source).id == TOK_STRING) {
                 Token val = next_token(source);
                 Value value = is_number ? double_val(strtod(val.lex.start, NULL)) : 
-                                          string_val(val.lex.start);
+                                          string_val((char *)val.lex.start);
                 size_t index = write_value(chunk, value);
 
                 // If it's just a number and a expr-ender, you can load it directly
@@ -153,10 +169,10 @@ static void parse_assignment(Chunk *chunk, Source *source) {
         } else {
             emit_byte(chunk, OP_LOAD);
             emit_ident(chunk, var.lex);
-            parse_addition(chunk, source);
+            EXPR(PREC_ASSIGN+1);
         }
     } else {
-        parse_addition(chunk, source);
+        EXPR(PREC_ASSIGN+1);
     }
 }
 
@@ -184,6 +200,58 @@ static void expression(Chunk *chunk, Source *source, Prec prec) {
     }
 }
 
+static size_t parse_block(Chunk *chunk, Source *source) {
+    bool multiline = match_token(source, TOK_LBRACE);
+    size_t orig_size = vector_size(chunk->code);
+
+    do
+        statement(chunk, source);
+    while (multiline && !match_token(source, TOK_RBRACE));
+
+    return vector_size(chunk->code) - orig_size;
+}
+
+static bool ifstmt(Chunk *chunk, Source *source) {
+    if (match_token(source, TOK_IF)) {
+        REQUIRE(TOK_LPAREN, "expected ( after if statement", -7);
+        EXPR(PREC_NONE);
+        REQUIRE(TOK_RPAREN, "expected ) after if statement", -7);
+
+        emit_byte(chunk, OP_COND_JMP);
+
+        // Write the maximum possible number so we have enough space
+        size_t jumps_len = vector_size(chunk->jumps);
+        // Save start of data and length of data
+        size_t start = vector_size(chunk->code);
+        emit_number(chunk, jumps_len);
+        size_t data_len = vector_size(chunk->code)-start;
+
+        size_t start_body = vector_size(chunk->code);
+        parse_block(chunk, source);
+        size_t body_len = vector_size(chunk->code)-start_body;
+
+        size_t index = jump_ind(chunk, body_len);
+
+        // If new data was written
+        if (vector_size(chunk->jumps) - jumps_len == 0) {
+            Chunk tmp = empty_chunk();
+            emit_number(&tmp, index);
+            // Zero out old data
+            for (size_t i = 0; i < data_len; ++i)
+                chunk->code[start+i] = 0;
+
+            // Write in new data
+            for (size_t i = vector_size(tmp.code); i > 0; --i)
+                chunk->code[start+i-1] = tmp.code[i-1];
+            
+            vector_free(tmp.code);
+        }
+
+        return true;
+    }
+    return false;
+}
+
 static bool printstmt(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_PRINT)) {
         bool trailing_comma = true;
@@ -197,8 +265,7 @@ static bool printstmt(Chunk *chunk, Source *source) {
             }
         } while (match_token(source, TOK_COMMA) && !(peek_token(source).id == TOK_SEMICOLON));
 
-        if (!match_token(source, TOK_SEMICOLON))
-            ERROR("Expected semicolon after print statement", -5);
+        REQUIRE(TOK_SEMICOLON, "Expected semicolon after print statement", -5);
 
         if (!trailing_comma) {
             vector_pop_back(chunk->code);
@@ -206,13 +273,12 @@ static bool printstmt(Chunk *chunk, Source *source) {
         }
         return true;
     }
-    return false;
+    return ifstmt(chunk, source);
 }
 
 static void exprstmt(Chunk *chunk, Source *source) {
     expression(chunk, source, PREC_NONE);
-    if (!match_token(source, TOK_SEMICOLON))
-        ERROR("Expected semicolon after expression", -4);
+    REQUIRE(TOK_SEMICOLON, "Expected semicolon after expression", -5);
     emit_byte(chunk, OP_POP_TOP);
 }
 

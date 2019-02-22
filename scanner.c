@@ -45,6 +45,8 @@ static Token parse_ident(Source *source) {
     switch (*source->start) {
         case 'p':
             return match_kwd("rint", 4, source, TOK_PRINT);
+        case 'i':
+            return match_kwd("f", 1, source, TOK_IF);
     }
     return token(TOK_IDENT, source);
 }
@@ -63,6 +65,8 @@ static Token parse_other(Source *source) {
         CASE(';', SEMICOLON);
         CASE('=', ASSIGN);
         CASE(',', COMMA);
+        CASE('{', LBRACE);
+        CASE('}', RBRACE);
         default:
             return parse_ident(source);
     }

@@ -2,6 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+static char *strdup(const char *s) {
+    char *d = malloc(strlen (s) + 1);
+    if (d == NULL) return NULL;
+    strcpy(d,s);
+    return d;
+}
+
 /*#define INT_TYPE uint64_t
 void printbits(INT_TYPE v) {
     char buf[sizeof(INT_TYPE)*8+1];
@@ -79,9 +86,21 @@ Value bool_value(bool cond) {
     return v;
 }
 
-Value string_val(const char *string) {
+Value string_val(char *string) {
     Value v;
     SET_VALUE(v, string);
     SET_TYPE(v, TYPE_STRING);
     return v;
+}
+
+Value copy_val(Value source) {
+    if (IS_POINTER(source)) {
+        switch (GET_TYPE(source)) {
+            case TYPE_STRING:
+                return string_val(strdup(VAL_AS(source, const char *)));
+            default:
+                break;
+        }
+    }
+    return source;
 }
