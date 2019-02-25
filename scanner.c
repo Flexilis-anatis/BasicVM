@@ -53,6 +53,8 @@ static Token parse_ident(Source *source) {
             return match_kwd("unction", 7, source, TOK_FUNCTION);
         case 'r':
             return match_kwd("eturn", 5, source, TOK_RETURN);
+        case 'c':
+            return match_kwd("losure", 6, source, TOK_CLOSURE);
     }
     return token(TOK_IDENT, source);
 }

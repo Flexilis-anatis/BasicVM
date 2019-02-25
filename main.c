@@ -6,17 +6,12 @@
 #include <readline/readline.h>
 #include "asm.h"
 
-#define STRING "fib = function(n) {" \
-                   "if (n < 2)" \
-                       "return 1;" \
-                    "return n * fib(n - 1);" \
-                "};" \
-                "print fib(3);"
+#define STRING "x = 10; f = closure () {return x;}; x = 5; print f(), x;"
 int main(void) {
     Chunk chunk = compile(STRING);
     dis(&chunk);
     printf("------------\n");
-    dis(&VAL_AS(chunk.consts->data[2], Func *)->chunk);
+    //dis(&VAL_AS(chunk.consts->data[2], Func *)->chunk);
     printf("------------\n");
     Scope *scope = init_scope(&chunk);
 

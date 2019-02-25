@@ -24,4 +24,5 @@ F(const_store);
 F(store);
 F(load);
 F(call);
+F(bind);
 #undef F

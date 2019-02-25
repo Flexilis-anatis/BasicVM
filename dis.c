@@ -108,8 +108,14 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             putchar('\n');
             break;
         }
+        case OP_BIND: {
+            (*ip)++;
+            extract_number(ip);
+            puts("BIND {CLOSURE}");
+            break;
+        }
         default: {
-            printf("UNRECOGNIZED: %u\n", *(*ip++));
+            printf("UNRECOGNIZED: %u\n", *(*ip)++);
             break;
         }
     }

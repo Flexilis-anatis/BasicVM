@@ -2,9 +2,11 @@
 #include "value.h"
 #include "token.h"
 #include "func.h"
+#include "closure.h"
 #include "runner.h"
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 
 #ifdef DEBUG_RUNNER
 #include "dis.h"
@@ -137,11 +139,8 @@ Scope *make_scope(size_t call_arity, Func *func, Scope *scope) {
     return new_scope;
 }
 
-void op_call(Scope *scope) {
-    size_t call_arity = extract_number(&scope->ip);
-    Value func_val = scope->stack[vector_size(scope->stack)-call_arity-1];
+void func_call(Scope *scope, Value func_val, size_t call_arity) {
     Func *func = VAL_AS(func_val, Func *);
-    assert(func);
     
     Scope *fscope = make_scope(call_arity, func, scope);
 
@@ -159,4 +158,60 @@ void op_call(Scope *scope) {
     free_scope(fscope);
     vector_free(func->params);
     free(func);
+}
+
+void closure_call(Scope *scope, Value close_val, size_t call_arity) {
+    Closure *closure = VAL_AS(close_val, Closure *);
+
+    Scope *fscope = malloc(sizeof(Scope));
+    fscope->chunk = &closure->func->chunk;
+    fscope->ip = fscope->chunk->code;
+    fscope->local_vars = closure->ht;
+    fscope->parent = scope;
+    fscope->stack = NULL;
+
+    assert(call_arity == func_arity(closure->func));
+    while (call_arity--) {
+        Lex ident = closure->func->params[call_arity];
+        store(fscope, ident, pop(scope));
+    }
+
+    InterpStat result = run_scope(fscope);
+    vector_pop_back(scope->stack);
+    #ifdef DEBUG_RUNNER
+    print_stack(scope);
+    #endif
+    if (result == INTERP_END || vector_size(fscope->stack) == 0) {
+        push_val(scope, nil_val());
+    } else {
+        push_val(scope, copy_val(last_val(fscope)));
+    }
+
+    free_scope(fscope);
+    vector_free(closure->func->params);
+    free(closure->func);
+    free(closure);
+}
+
+void op_call(Scope *scope) {
+    size_t call_arity = extract_number(&scope->ip);
+    Value val = scope->stack[vector_size(scope->stack)-call_arity-1];
+    switch (GET_TYPE(val)) {
+    case TYPE_FUNC:
+        func_call(scope, val, call_arity);
+        break;
+    case TYPE_CLOSURE:
+        closure_call(scope, val, call_arity);
+        break;
+    }
+}
+
+void op_bind(Scope *scope) {
+    size_t index = extract_number(&scope->ip);
+    Value val = scope->chunk->consts->data[index];
+    Closure *close = VAL_AS(val, Closure *);
+    hash_table tmp = ht_copy(scope->local_vars, copy_val);
+    close->ht = malloc(sizeof(hash_table));
+    memcpy(close->ht, &tmp, sizeof(hash_table));
+    push_val(scope, copy_val(val));
 }

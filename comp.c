@@ -1,21 +1,8 @@
 #include "comp.h"
 #include "func.h"
+#include "closure.h"
 #include <stdio.h>
 #include <string.h>
-
-/*
-if (x)
-    print "hey";
-else
-    print "aw";
-
-0 LOAD x
-2 JMP 5
-4 PUSH "hey"
-6 PUTS
-
-
-*/
 
 #define EXPR(prec) expression(chunk, source, prec)
 #define ERROR(msg, code) \
@@ -214,13 +201,14 @@ static size_t parse_block(Chunk *chunk, Source *source) {
 }
 
 static void parse_closure(Chunk *chunk, Source *source) {
-    if (match_token(source, TOK_FUNCTION)) {
+    bool isclosure = false;
+    if (match_token(source, TOK_FUNCTION) || (isclosure = match_token(source, TOK_CLOSURE))) {
         Func *func = malloc(sizeof(Func));
         func->chunk = empty_chunk(chunk->consts);
         func->params = NULL;
 
         // parse param list
-        REQUIRE(TOK_LPAREN, "Expected left parenthesis after function keyword", -21);
+        REQUIRE(TOK_LPAREN, "Expected left parenthesis for function declaration", -21);
         if (peek_token(source).id == TOK_IDENT) {
             do {
                 Token ident = next_token(source);
@@ -229,24 +217,37 @@ static void parse_closure(Chunk *chunk, Source *source) {
                 vector_push_back(func->params, ident.lex);
             } while (match_token(source, TOK_COMMA));
         }
-        REQUIRE(TOK_RPAREN, "Expected right parenthesis after function keyword", -22);
+        REQUIRE(TOK_RPAREN, "Expected right parenthesis for function declaration", -22);
 
         // Body
         if (peek_token(source).id != TOK_LBRACE)
-            ERROR("Expected left brace after function keyword", 1);
-        puts("Parsing block");
+            ERROR("Expected left brace for function declaration", 1);
         parse_block(&func->chunk, source);
 
-        // Set up value pointer
-        Value func_val;
-        func_val.p = 0;
-        SET_TYPE(func_val, TYPE_FUNC);
-        SET_VALUE(func_val, func);
+        if (isclosure) {
+            Closure *closure = malloc(sizeof(Closure));
+            closure->func = func;
 
-        // Add the bytecode! :D
-        emit_byte(chunk, OP_PUSH);
-        emit_constant(chunk, func_val);
-        parse_call(chunk, source);
+            Value close_val;
+            close_val.p = 0;
+            SET_TYPE(close_val, TYPE_CLOSURE);
+            SET_VALUE(close_val, closure);
+
+            emit_byte(chunk, OP_BIND);
+            emit_constant(chunk, close_val);
+            parse_call(chunk, source);
+        } else {
+            // Set up value pointer
+            Value func_val;
+            func_val.p = 0;
+            SET_TYPE(func_val, TYPE_FUNC);
+            SET_VALUE(func_val, func);
+
+            // Add the bytecode! :D
+            emit_byte(chunk, OP_PUSH);
+            emit_constant(chunk, func_val);
+            parse_call(chunk, source);
+        }
     } else {
         EXPR(PREC_CLOSURE+1);
     }
