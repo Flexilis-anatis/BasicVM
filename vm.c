@@ -9,11 +9,11 @@ Scope *init_scope(Chunk *chunk) {
 
     scope->chunk = chunk;
     scope->stack = NULL;
-    scope->parent_scope = NULL;
+    scope->parent = NULL;
     scope->ip = chunk->code;
 
     scope->local_vars = malloc(sizeof(hash_table));
-    ht_init(scope->local_vars, 0, 0.03, free_value_voidp);
+    ht_init(scope->local_vars, 0.03, free_value_voidp);
 
     return scope;
 }
@@ -32,6 +32,7 @@ VM *init_vm(Scope *scope) {
 }
 
 void free_vm(VM *vm) {
+    free_consts(vm->scope->chunk->consts);
     free_scope(vm->scope);
     free(vm);
 }

@@ -1,6 +1,14 @@
 #include "value.h"
+#include "func.h"
 #include <string.h>
 #include <stdlib.h>
+
+static char *strdup(const char *s) {
+    char *d = malloc(strlen (s) + 1);
+    if (d == NULL) return NULL;
+    strcpy(d,s);
+    return d;
+}
 
 /*#define INT_TYPE uint64_t
 void printbits(INT_TYPE v) {
@@ -22,6 +30,12 @@ void print_value(Value value) {
             break;
         case TYPE_FALSE:
             printf("false");
+            break;
+        case TYPE_FUNC:
+            printf("{CLOSURE}");
+            break;
+        case TYPE_NIL:
+            printf("nil");
             break;
         }
     } else {
@@ -53,8 +67,16 @@ Value double_val(double val) {
 }
 
 void free_value(Value val) {
-    if (IS_POINTER(val))
-        free(VAL_AS(val, void *)); // naive for now
+    if (IS_POINTER(val)) {
+        switch (GET_TYPE(val)) {
+            case TYPE_STRING:
+                free(VAL_AS(val, char *));
+                break;
+            case TYPE_FUNC:
+                free_func(VAL_AS(val, Func *));
+                break;
+        }
+    }
 }
 
 bool value_true(Value val) {
@@ -63,6 +85,7 @@ bool value_true(Value val) {
         case TYPE_STRING:
             return *VAL_AS(val, const char *) != '\0';
         case TYPE_TRUE:
+        case TYPE_FUNC:
             return true;
         default:
             return false;
@@ -79,9 +102,36 @@ Value bool_value(bool cond) {
     return v;
 }
 
-Value string_val(const char *string) {
+Value string_val(char *string) {
     Value v;
+    v.p = 0;
     SET_VALUE(v, string);
     SET_TYPE(v, TYPE_STRING);
+    return v;
+}
+
+Value copy_val(Value source) {
+    if (IS_POINTER(source)) {
+        switch (GET_TYPE(source)) {
+            case TYPE_STRING:
+                return string_val(strdup(VAL_AS(source, const char *)));
+            case TYPE_FUNC: {
+                Func *copy = copy_func(VAL_AS(source, Func *));
+                source.p = 0;
+                SET_TYPE(source, TYPE_FUNC);
+                SET_VALUE(source, copy);
+                return source;
+            }
+            default:
+                break;
+        }
+    }
+    return source;
+}
+
+Value nil_val() {
+    Value v;
+    v.p = 0;
+    SET_TYPE(v, TYPE_NIL);
     return v;
 }

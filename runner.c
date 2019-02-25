@@ -1,27 +1,65 @@
 #include "runner.h"
 #include "funcs.h"
 
+#ifdef DEBUG_RUNNER
+#include "dis.h"
+#endif
+
 // The VM object just exists for slightly more extendability
 void run_vm(VM *vm) {
-    run_scope(vm->scope);
+    if (run_scope(vm->scope) == INTERP_RET) {
+        fprintf(stderr, "Return statement outside of a function\n");
+        exit(-19);
+    }
 }
 
-void run_scope(Scope *scope) {
-    while (run_next(scope));
+InterpStat run_scope(Scope *scope) {
+    InterpStat state;
+    while ((state = run_next(scope)) == INTERP_OK);
+    return state;
 }
 
 // Run the next instruction
-bool run_next(Scope *scope) {
+InterpStat run_next(Scope *scope) {
     if (scope->ip >= vector_end(scope->chunk->code))
-        return false;
+        return INTERP_END;
+
+    #ifdef DEBUG_RUNNER
+    uint8_t *fakeip = scope->ip;
+    dis_instr(&fakeip, scope->chunk);
+    getchar();
+    #endif
+
     uint8_t instr = *(scope->ip++);
     switch (instr) {
         case OP_PUSH:
-            push_val(scope, get_val(scope));
+            push_val(scope, copy_val(get_val(scope)));
             break;
 
         case OP_NEG:
             scope->stack[vector_size(scope->stack)-1].d *= -1;
+            break;
+
+        case OP_LOAD:
+            op_load(scope);
+            break;
+
+        case OP_STORE:
+            op_store(scope);
+            break;
+
+        case OP_CONST_STORE:
+            op_const_store(scope);
+            break;
+
+        case OP_CALL:
+            #ifdef DEBUG_RUNNER
+            printf("Enter scope...\n");
+            #endif
+            op_call(scope);
+            #ifdef DEBUG_RUNNER
+            printf("Exit scope.\n");
+            #endif
             break;
 
         case OP_PRINT:
@@ -52,6 +90,10 @@ bool run_next(Scope *scope) {
             op_mul(scope);
             break;
 
+        case OP_LT:
+            op_lt(scope);
+            break;
+
         case OP_COND_JMP:
             op_cond_jmp(scope);
             break;
@@ -65,9 +107,14 @@ bool run_next(Scope *scope) {
             break;
 
         case OP_RETURN:
-            print_value(last_val(scope));
-            putchar('\n');
-            return false;
+            return INTERP_RET;
+
+        default:
+            fprintf(stderr, "@%lu: UNRECOGNIZED OPCODE: %u\n", scope->ip-scope->chunk->code-1, instr);
+            exit(-300);
     }
-    return true;
+    #ifdef DEBUG_RUNNER
+    print_stack(scope);
+    #endif
+    return INTERP_OK;
 }

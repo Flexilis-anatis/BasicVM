@@ -1,7 +1,10 @@
 #pragma once
 #include "vm.h"
-#include <stdbool.h>
+
+typedef enum {
+    INTERP_OK, INTERP_END, INTERP_RET
+} InterpStat;
 
 void run_vm(VM *vm);
-void run_scope(Scope *scope);
-bool run_next(Scope *scope);
+InterpStat run_scope(Scope *scope);
+InterpStat run_next(Scope *scope);

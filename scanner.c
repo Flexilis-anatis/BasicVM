@@ -24,7 +24,7 @@ static Token token(TokID type, Source *source) {
                         (x) == '_')
 #define ISDIGIT(x) (INRANGE((x),'0','9') || (x) == '.')
 
-static Token parse_number(Source *source) {
+Token parse_number(Source *source) {
     while (ISDIGIT(*source->end))
         ++source->end;
 
@@ -45,6 +45,14 @@ static Token parse_ident(Source *source) {
     switch (*source->start) {
         case 'p':
             return match_kwd("rint", 4, source, TOK_PRINT);
+        case 'i':
+            return match_kwd("f", 1, source, TOK_IF);
+        case 'e':
+            return match_kwd("lse", 3, source, TOK_ELSE);
+        case 'f':
+            return match_kwd("unction", 7, source, TOK_FUNCTION);
+        case 'r':
+            return match_kwd("eturn", 5, source, TOK_RETURN);
     }
     return token(TOK_IDENT, source);
 }
@@ -61,14 +69,18 @@ static Token parse_other(Source *source) {
         CASE('/', DIV);
         CASE('%', MOD);
         CASE(';', SEMICOLON);
+        CASE('=', ASSIGN);
         CASE(',', COMMA);
+        CASE('{', LBRACE);
+        CASE('}', RBRACE);
+        CASE('<', LT);
         default:
             return parse_ident(source);
     }
 }
 #undef CASE
 
-static Token parse_string(Source *source) {
+Token parse_string(Source *source) {
     ++source->start;
     char last = '\0';
     do
@@ -78,7 +90,7 @@ static Token parse_string(Source *source) {
     Token t = token(TOK_STRING, source);
     ++source->end;
     t.lex.start = delexify(t.lex);
-    t.lex.end = t.lex.start-(source->end-source->start);
+    t.lex.end = t.lex.start+(source->end-source->start);
     return t;
 }
 

@@ -20,22 +20,22 @@
  * Would do it!
  */
 
-#define POINTER_MASK 281474976710655U // (1 << 52) - 1
-#define NAN_MASK 9218868437227405312U // (1 << 63) through (1 << 53)
-#define SIGN_MASK 18446744073709551616U // 1 << 63
-#define TYPE_MASK 4222124650659840U // (1 << 53) through (1 << 49)
-#define MANTISSA_MASK 4503599627370495U // SIGN_MASK | POINTER_MASK
+#define POINTER_MASK  281474976710655U // (1 << 52) - 1
+#define NAN_MASK      9218868437227405312U // (1 << 63) through (1 << 53)
+#define SIGN_MASK     18446744073709551616U // 1 << 63
+#define TYPE_MASK     4222124650659840U // (1 << 53) through (1 << 49)
+#define MANTISSA_MASK 4503599627370495U // TYPE_MASK | POINTER_MASK
 
-#define VAL_AS(vl,type) ((type)(vl.p&POINTER_MASK))
+#define VAL_AS(vl,type) ((type)((vl).p&POINTER_MASK))
 #define IS_POINTER(vl) (((vl).p&NAN_MASK)==NAN_MASK)
-#define SET_VALUE(vl,to) ((vl).p=((uint64_t)(to))|NAN_MASK)
+#define SET_VALUE(vl,to) ((vl).p|=((uint64_t)(to)))
 #define GET_VALUE(vl) (((vl).p)&POINTER_MASK)
 #define GET_MANTISSA(vl) ((vl).p&MANTISSA_MASK)
 #define GET_TYPE(vl) (((vl).p&TYPE_MASK)>>48)
-#define SET_TYPE(vl,to) ((vl).p=((vl.p)&~TYPE_MASK)|(((uint64_t)(to))<<48)|NAN_MASK)
+#define SET_TYPE(vl,to) ((vl).p=((vl.p)&~TYPE_MASK)|NAN_MASK|(((uint64_t)(to))<<48))
 
 typedef enum {
-    TYPE_TRUE, TYPE_FALSE, TYPE_STRING, 
+    TYPE_TRUE, TYPE_FALSE, TYPE_NIL, TYPE_STRING, TYPE_FUNC
 } Type;
 
 typedef union {
@@ -54,4 +54,6 @@ Value double_val(double val);
 void free_value(Value value);
 bool value_true(Value value);
 Value bool_value(bool cond);
-Value string_val(const char *string);
+Value string_val(char *string);
+Value copy_val(Value source);
+Value nil_val(void);

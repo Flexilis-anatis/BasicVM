@@ -1,19 +1,37 @@
 #include "chunk.h"
+#include <string.h>
 
-// precalculated. nano-optimization
+#include "func.h" // temp
+
 #define SIG_BITS 7
 #define END_FLAG 128
 
-Chunk empty_chunk(void) {
+Chunk empty_chunk(Consts *consts) {
     Chunk chunk;
     chunk.code = NULL;
-    chunk.data = NULL;
+    chunk.consts = consts;
     return chunk;
+}
+
+Consts *empty_consts(void) {
+    Consts *consts = malloc(sizeof(Consts));
+    consts->data = NULL;
+    consts->idents = NULL;
+    consts->jumps = NULL;
+    return consts;
 }
 
 void free_chunk(Chunk *chunk) {
     vector_free(chunk->code);
-    vector_free(chunk->data);
+}
+
+void free_consts(Consts *consts) {
+    for (size_t i = 0; i < vector_size(consts->data); ++i)
+        free_value(consts->data[i]);
+    vector_free(consts->data);
+    vector_free(consts->idents);
+    vector_free(consts->jumps);
+    free(consts);
 }
 
 void emit_byte(Chunk *chunk, uint8_t byte) {
@@ -22,8 +40,8 @@ void emit_byte(Chunk *chunk, uint8_t byte) {
 
 // Write's a new value and returns it's index
 size_t write_value(Chunk *chunk, Value value) {
-    size_t index = vector_size(chunk->data);
-    vector_push_back(chunk->data, value);
+    size_t index = vector_size(chunk->consts->data);
+    vector_push_back(chunk->consts->data, value);
     return index;
 }
 
@@ -93,3 +111,41 @@ void emit_number(Chunk *chunk, unsigned long number) {
 #undef LAST_BITS
 #undef DROP_BITS
 
+
+// Get the index of a constant it. Add it if it's not found
+size_t jump_ind(Chunk *chunk, size_t jump_size) {
+    size_t size = vector_size(chunk->consts->jumps);
+    for (size_t i = 0; i < size; ++i) {
+        if (chunk->consts->jumps[i] == jump_size)
+            return i;
+    }
+    vector_push_back(chunk->consts->jumps, jump_size);
+    return size;
+}
+
+// Emit a constant. Makes sure it's not a repeat
+void emit_constant(Chunk *chunk, Value constant) {
+    // Check to see if it's a repeat constant
+    for (size_t i = 0; i < vector_size(chunk->consts->data); ++i) {
+        if (same_value(chunk->consts->data[i], constant)) {
+            emit_number(chunk, i);
+            return;
+        }
+    }
+    // If it's not a dup, add it to the data section AND emit it
+    emit_number(chunk, write_value(chunk, constant));
+}
+
+void emit_ident(Chunk *chunk, Lex ident) {
+    // Check to see if it's a repeat ident
+    for (size_t i = 0; i < vector_size(chunk->consts->idents); ++i) {
+        Lex data = chunk->consts->idents[i];
+        if (data.end - data.start == ident.end - ident.start &&
+            memcmp(data.start, ident.start, data.end - data.start) == 0) {
+            emit_number(chunk, i);
+            return;
+        }
+    }
+    vector_push_back(chunk->consts->idents, ident);
+    emit_number(chunk, vector_size(chunk->consts->idents)-1);
+}

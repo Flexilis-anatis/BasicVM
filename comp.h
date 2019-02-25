@@ -7,6 +7,8 @@
 typedef enum {
     PREC_NONE,
     PREC_ASSIGN,
+    PREC_CLOSURE,
+    PREC_LOGIC,
     PREC_ADD,
     PREC_MUL,
     PREC_NEGATE,

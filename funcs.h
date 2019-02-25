@@ -15,8 +15,13 @@ F(sub);
 F(mul);
 F(div);
 F(mod);
+F(lt);
 F(print);
 F(puts);
 F(const_jmp);
 F(cond_jmp);
+F(const_store);
+F(store);
+F(load);
+F(call);
 #undef F
