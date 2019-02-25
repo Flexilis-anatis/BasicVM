@@ -35,7 +35,7 @@
 #define SET_TYPE(vl,to) ((vl).p=((vl.p)&~TYPE_MASK)|NAN_MASK|(((uint64_t)(to))<<48))
 
 typedef enum {
-    TYPE_TRUE, TYPE_FALSE, TYPE_NIL, TYPE_STRING, TYPE_FUNC
+    TYPE_TRUE, TYPE_FALSE, TYPE_NIL, TYPE_STRING, TYPE_FUNC, TYPE_CLOSURE
 } Type;
 
 typedef union {

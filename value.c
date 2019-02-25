@@ -1,5 +1,6 @@
 #include "value.h"
 #include "func.h"
+#include "closure.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -9,15 +10,6 @@ static char *strdup(const char *s) {
     strcpy(d,s);
     return d;
 }
-
-/*#define INT_TYPE uint64_t
-void printbits(INT_TYPE v) {
-    char buf[sizeof(INT_TYPE)*8+1];
-    size_t i = sizeof(INT_TYPE)*8+1;
-    for (; i--; v >>= 1) buf[i]='0' + (v & 1);
-    buf[65] = '\0';
-    printf(buf);
-}*/
 
 void print_value(Value value) {
     if (IS_POINTER(value)) {
@@ -32,6 +24,9 @@ void print_value(Value value) {
             printf("false");
             break;
         case TYPE_FUNC:
+            printf("{FUNCTION}");
+            break;
+        case TYPE_CLOSURE:
             printf("{CLOSURE}");
             break;
         case TYPE_NIL:
@@ -75,6 +70,9 @@ void free_value(Value val) {
             case TYPE_FUNC:
                 free_func(VAL_AS(val, Func *));
                 break;
+            case TYPE_CLOSURE:
+                free_closure(VAL_AS(val, Closure *));
+                break;
         }
     }
 }
@@ -86,6 +84,7 @@ bool value_true(Value val) {
             return *VAL_AS(val, const char *) != '\0';
         case TYPE_TRUE:
         case TYPE_FUNC:
+        case TYPE_CLOSURE:
             return true;
         default:
             return false;
@@ -119,6 +118,13 @@ Value copy_val(Value source) {
                 Func *copy = copy_func(VAL_AS(source, Func *));
                 source.p = 0;
                 SET_TYPE(source, TYPE_FUNC);
+                SET_VALUE(source, copy);
+                return source;
+            }
+            case TYPE_CLOSURE: {
+                Closure *copy = copy_closure(VAL_AS(source, Closure *));
+                source.p = 0;
+                SET_TYPE(source, TYPE_CLOSURE);
                 SET_VALUE(source, copy);
                 return source;
             }
