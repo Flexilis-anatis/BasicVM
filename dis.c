@@ -1,4 +1,41 @@
 #include "dis.h"
+#include "func.h"
+#include "closure.h"
+
+void pretty_dis(Chunk *chunk) {
+    dis(chunk);
+    printf("------------\n");
+    for (size_t i = 0; i < vector_size(chunk->consts->data); ++i) {
+        Func *func;
+        switch(GET_TYPE(chunk->consts->data[i])) {
+            case TYPE_FUNC:
+                printf("FUNCTION (ID: %lu)\n", i);
+                func = VAL_AS(chunk->consts->data[i], Func *);
+                break;
+            case TYPE_CLOSURE:
+                printf("CLOSURE (ID: %lu)\n", i);
+                func = VAL_AS(chunk->consts->data[i], Closure *)->func;
+                break;
+            default:
+                continue;
+        }
+        printf("Params: (");
+        if (vector_size(func->params)) {
+            for (size_t j = 0; j < vector_size(func->params)-1; ++j) {
+                Lex ident = func->params[i];
+                for (const char *c = ident.start; c != ident.end; ++c)
+                    putchar(*c);
+                printf(", ");
+            }
+            Lex ident = func->params[vector_size(func->params)-1];
+            for (const char *c = ident.start; c != ident.end; ++c)
+                putchar(*c);
+        }
+        puts(")");
+        dis(&func->chunk);
+        printf("------------\n");
+    }
+}
 
 #define OP(op) \
     case OP_##op: {    \
@@ -110,8 +147,7 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
         }
         case OP_BIND: {
             (*ip)++;
-            extract_number(ip);
-            puts("BIND {CLOSURE}");
+            printf("BIND {CLOSURE} (%lu)\n", extract_number(ip));
             break;
         }
         default: {

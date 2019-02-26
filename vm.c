@@ -20,6 +20,8 @@ Scope *init_scope(Chunk *chunk) {
 
 void free_scope(Scope *scope) {
     free_chunk(scope->chunk);
+    for (size_t i = 0; i < vector_size(scope->stack); ++i)
+        free_value(scope->stack[i]);
     vector_free(scope->stack);
     ht_free(scope->local_vars);
     free(scope);

@@ -32,6 +32,7 @@ static void parse_call(Chunk *chunk, Source *source) {
 
         emit_byte(chunk, OP_CALL);
         emit_number(chunk, arity);
+        parse_call(chunk, source);
     }
 }
 

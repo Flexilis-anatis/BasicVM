@@ -8,10 +8,6 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef DEBUG_RUNNER
-#include "dis.h"
-#endif
-
 #define RUNTIME_ERROR(m,c) \
     do {                                   \
         fprintf(stderr,                    \
@@ -146,9 +142,6 @@ void func_call(Scope *scope, Value func_val, size_t call_arity) {
 
     InterpStat result = run_scope(fscope);
     vector_pop_back(scope->stack);
-    #ifdef DEBUG_RUNNER
-    print_stack(scope);
-    #endif
     if (result == INTERP_END || vector_size(fscope->stack) == 0) {
         push_val(scope, nil_val());
     } else {
@@ -178,9 +171,6 @@ void closure_call(Scope *scope, Value close_val, size_t call_arity) {
 
     InterpStat result = run_scope(fscope);
     vector_pop_back(scope->stack);
-    #ifdef DEBUG_RUNNER
-    print_stack(scope);
-    #endif
     if (result == INTERP_END || vector_size(fscope->stack) == 0) {
         push_val(scope, nil_val());
     } else {
