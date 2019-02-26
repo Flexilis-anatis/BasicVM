@@ -14,7 +14,7 @@ typedef enum {
 typedef struct {
     vector(Lex) idents;
     vector(Value) data;
-    vector(size_t) jumps;
+    vector(long) jumps;
 } Consts;
 
 // A chunk of code
@@ -46,6 +46,6 @@ unsigned long extract_number(uint8_t **ip);
 // Write's a number to the chunk
 void emit_number(Chunk *chunk, unsigned long number);
 
-size_t jump_ind(Chunk *chunk, size_t jump_size);
+size_t jump_ind(Chunk *chunk, long jump_size);
 void emit_constant(Chunk *chunk, Value val);
 void emit_ident(Chunk *chunk, Lex ident);

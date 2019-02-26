@@ -1,0 +1,9 @@
+makeGreeter = function(greeting) {
+    return closure(name) {
+        print greeting, name;
+    };
+};
+
+greet = makeGreeter("Hello,");
+greet("John");
+greet("Mary");

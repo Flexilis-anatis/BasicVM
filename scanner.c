@@ -55,6 +55,8 @@ static Token parse_ident(Source *source) {
             return match_kwd("eturn", 5, source, TOK_RETURN);
         case 'c':
             return match_kwd("losure", 6, source, TOK_CLOSURE);
+        case 'w':
+            return match_kwd("hile", 4, source, TOK_WHILE);
     }
     return token(TOK_IDENT, source);
 }

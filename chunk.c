@@ -112,8 +112,8 @@ void emit_number(Chunk *chunk, unsigned long number) {
 #undef DROP_BITS
 
 
-// Get the index of a constant it. Add it if it's not found
-size_t jump_ind(Chunk *chunk, size_t jump_size) {
+// Get the index of a jump. Add it if it's not found
+size_t jump_ind(Chunk *chunk, long jump_size) {
     size_t size = vector_size(chunk->consts->jumps);
     for (size_t i = 0; i < size; ++i) {
         if (chunk->consts->jumps[i] == jump_size)

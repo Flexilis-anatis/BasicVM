@@ -2,7 +2,7 @@
 files="$(find . -type f | grep -vE '\./\.git|\.gch' | grep '\.c' | sort -r | sed -n -e 'H;${x;s/\n/ /g;s/^,//;p;}')"
 
 warnings="-Wextra -Wall -pedantic -Wno-implicit-fallthrough"
-name="expr"
+name="bvm"
 opt="2"
 std="c17"
 linkage="-lm -lreadline"

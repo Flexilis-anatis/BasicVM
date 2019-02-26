@@ -75,6 +75,7 @@ void op_const_jmp(Scope *scope) {
 }
 
 void op_cond_jmp(Scope *scope) {
+    size_t start = scope->ip-scope->chunk->code;
     Value cond = pop(scope);
     unsigned long index = extract_number(&scope->ip);
     if (!value_true(cond))
@@ -122,8 +123,9 @@ void op_load(Scope *scope) {
 
     if (result == NULL)
         RUNTIME_ERROR("Variable not found", -8);
-    else
+    else {
         push_val(scope, copy_val(*result));
+    }
 }
 
 Scope *make_scope(size_t call_arity, Func *func, Scope *scope) {
@@ -152,7 +154,7 @@ void func_call(Scope *scope, Value func_val, size_t call_arity) {
     if (result == INTERP_END || vector_size(fscope->stack) == 0) {
         push_val(scope, nil_val());
     } else {
-        push_val(scope, copy_val(last_val(fscope)));
+        push_val(scope, pop(fscope));
     }
 
     free_scope(fscope);
@@ -213,5 +215,6 @@ void op_bind(Scope *scope) {
     hash_table tmp = ht_copy(scope->local_vars, copy_val);
     close->ht = malloc(sizeof(hash_table));
     memcpy(close->ht, &tmp, sizeof(hash_table));
+
     push_val(scope, copy_val(val));
 }

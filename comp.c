@@ -4,6 +4,30 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+while (expr)
+    body
+
+:START
+EXPR
+JMP :END
+BODY
+CONSTJMP :START
+:END
+
+while (f() < 2)
+    print "F() is less than 2.";
+
+@0: LOAD f
+@2: CALL 0
+@4: PUSH 2
+@6: LT
+@7: JMP @14
+@9: PUSH "F() is less than 2."
+@11: PUTS
+@12 CONSTJMP @0
+*/
+
 #define EXPR(prec) expression(chunk, source, prec)
 #define ERROR(msg, code) \
     do {                      \
@@ -285,6 +309,30 @@ static void expression(Chunk *chunk, Source *source, Prec prec) {
     }
 }
 
+static void emit_max_jump(Chunk *chunk) {
+    emit_number(chunk, vector_size(chunk->consts->jumps));
+}
+
+static bool whilestmt(Chunk *chunk, Source *source) {
+    if (match_token(source, TOK_WHILE)) {
+        REQUIRE(TOK_LPAREN, "Expected left parenthesis for while-loop", 50);
+        size_t start = vector_size(chunk->code);
+        EXPR(PREC_NONE);
+        REQUIRE(TOK_RPAREN, "Expected right parenthesis for while-loop", 51);
+
+        emit_byte(chunk, OP_COND_JMP);
+        emit_max_jump(chunk);
+
+        parse_block(chunk, source);
+
+        emit_byte(chunk, OP_CONST_JMP);
+        emit_number(chunk, jump_ind(chunk, start-vector_size(chunk->code)));
+
+        return true;
+    }
+    return false;
+}
+
 static bool retstmt(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_RETURN)) {
         EXPR(PREC_NONE);
@@ -292,11 +340,7 @@ static bool retstmt(Chunk *chunk, Source *source) {
         emit_byte(chunk, OP_RETURN);
         return true;
     }
-    return false;
-}
-
-static void emit_max_jump(Chunk *chunk) {
-    emit_number(chunk, vector_size(chunk->consts->jumps));
+    return whilestmt(chunk, source);
 }
 
 static bool ifstmt(Chunk *chunk, Source *source) {
@@ -318,7 +362,8 @@ static bool ifstmt(Chunk *chunk, Source *source) {
         size_t body_len = vector_size(chunk->code)-start_body;
 
         bool iselse = match_token(source, TOK_ELSE);
-        unsigned long bits = BITS(vector_size(chunk->consts->jumps));
+        unsigned long bits;
+        if(iselse) bits = BITS(vector_size(chunk->consts->jumps));
         
         size_t index = jump_ind(chunk, body_len+(iselse?BYTES(bits)+1:0));
         // new scope just cause it's messy
