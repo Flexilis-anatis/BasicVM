@@ -48,6 +48,18 @@ InterpStat run_next(Scope *scope) {
             op_bind(scope);
             break;
 
+        case OP_BIND_NEW:
+            op_bind_new(scope);
+            break;
+
+        case OP_LOADATTR:
+            op_loadattr(scope);
+            break;
+
+        case OP_STOREATTR:
+            op_storeattr(scope);
+            break;
+
         case OP_STORE:
             op_store(scope);
             break;

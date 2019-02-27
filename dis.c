@@ -22,6 +22,27 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             printf("JMP @%lu\n", (*ip-chunk->code)+chunk->consts->jumps[number]);
             break;
         }
+        case OP_NEW: {
+            (*ip)++;
+            size_t cls = extract_number(ip);
+            printf("NEW ");
+            Lex ident = chunk->consts->idents[cls];
+            for (const char *c = ident.start; c != ident.end; ++c)
+                putchar(*c);
+            putchar('\n');
+        }
+        case OP_STOREATTR:
+        case OP_LOADATTR: {
+            printf(*ip == OP_STOREATTR ? "STORE%s" : "LOAD%s", "ATTR ");
+            (*ip)++;
+            size_t name = extract_number(ip);
+            Lex ident = chunk->consts->idents[name];
+            for (const char *c = ident.start; c != ident.end; ++c)
+                putchar(*c);
+            putchar('\n');
+        }
+        SIMPLE(LOADATTR)
+        SIMPLE(BIND_NEW)
         SIMPLE(NEG)
         SIMPLE(LT)
         SIMPLE(LTE)
@@ -47,19 +68,6 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             break;
         }
         SIMPLE(RETURN)
-        case OP_CONST_STORE: {
-            (*ip)++;
-            printf("CSTORE ");
-            size_t var = extract_number(ip);
-            Lex ident = chunk->consts->idents[var];
-            for (const char *i = ident.start; i < ident.end; ++i)
-                putchar(*i);
-            size_t number = extract_number(ip);
-            printf(" (");
-            print_value(chunk->consts->data[number]);
-            puts(")");
-            break;
-        }
         SIMPLE(ADD)
         SIMPLE(MUL)
         SIMPLE(MOD)

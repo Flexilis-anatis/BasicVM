@@ -28,5 +28,5 @@ Func *copy_func(Func *func) {
 }
 
 size_t func_arity(Func *func) {
-    return vector_size(func->params);
+    return vector_size(func->params) + ismethod;
 }

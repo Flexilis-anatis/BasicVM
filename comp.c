@@ -5,27 +5,32 @@
 #include <string.h>
 
 /*
-while (expr)
-    body
+class cls {
+    new function (self) {
+        self.test = 3;
+    };
 
-:START
-EXPR
-JMP :END
-BODY
-CONSTJMP :START
-:END
+    getTest = function (self) {
+        return self.test;
+    };
+}
+inst = new cls()
 
-while (f() < 2)
-    print "F() is less than 2.";
-
-@0: LOAD f
-@2: CALL 0
-@4: PUSH 2
-@6: LT
-@7: JMP @14
-@9: PUSH "F() is less than 2."
-@11: PUTS
-@12 CONSTJMP @0
+PUSH new
+BIND_NEW cls
+PUSH function
+LOAD cls
+STOREATTR getTest
+NEW cls
+STORE inst
+-------------------
+PUSH 3
+LOAD self
+STOREATTR test
+-------------------
+LOAD self
+LOADATTR test
+RETURN
 */
 
 #define EXPR(prec) expression(chunk, source, prec)
@@ -252,33 +257,9 @@ static void parse_assignment(Chunk *chunk, Source *source) {
         Token var = next_token(source);
         // Is there an equals sign?
         if (match_token(source, TOK_ASSIGN)) {
-            // Is the next token a number or string?
-            bool is_number = peek_token(source).id == TOK_NUMBER;
-            if (is_number || peek_token(source).id == TOK_STRING) {
-                Token val = next_token(source);
-                Value value = is_number ? double_val(strtod(val.lex.start, NULL)) : 
-                                          string_val((char *)val.lex.start);
-                size_t index = write_value(chunk, value);
-
-                // If it's just a number and a expr-ender, you can load it directly
-                if (EXPR_ENDER(peek_token(source).id)) {
-                    emit_byte(chunk, OP_CONST_STORE);
-                    emit_ident(chunk, var.lex);
-                    emit_number(chunk, index);
-                }
-                // Otherwise you have to evaluate it
-                else {
-                    emit_byte(chunk, OP_PUSH);
-                    emit_number(chunk, index);
-                    EXPR(PREC_NONE);
-                    emit_byte(chunk, OP_STORE);
-                    emit_ident(chunk, var.lex);
-                }
-            } else {
-                EXPR(PREC_NONE);
-                emit_byte(chunk, OP_STORE);
-                emit_ident(chunk, var.lex);
-            }
+            EXPR(PREC_NONE);
+            emit_byte(chunk, OP_STORE);
+            emit_ident(chunk, var.lex);
         } else {
             emit_byte(chunk, OP_LOAD);
             emit_ident(chunk, var.lex);

@@ -176,10 +176,41 @@ void func_call(Scope *scope, Value func_val, size_t call_arity) {
 }
 
 void op_new(Scope *scope) {
-    Value cls_val = pop(scope);
-    Class *cls = VAL_AS(cls_val, Class *); 
-    push_val(scope, copy_val(cls->new_func));
-    free_class(cls);
+    size_t index = extract_number(&scope->ip);
+    Class *class = VAL_AS(scope->chunk->consts->data[index], Class *);
+    Func *new = class->new_func;
+    Instance *inst = instantiate(class);
+
+    Scope *subscope = init_scope(new->chunk);
+    subscope->parent = scope;
+
+    size_t arity = func_arity(new);
+    while (arity--) {
+        size_t len = new->params[arity].end - new->params[arity].start;
+        ht_insert(subscope->local_vars, new->params[arity].start, len, pop(scope));
+    }
+
+    Value inst_val;
+    inst_val.p = 0;
+    SET_TYPE(inst_val, TYPE_INSTANCE);
+    SET_VALUE(inst_val, inst);
+    ht_insert(subscope->local_vars, "this", 4, copy_val(inst_val));
+
+    run_scope(subscope);
+
+    push_val(scope, inst_val);
+}
+
+void op_bind_new(Scope *scope) {
+    //
+}
+
+void op_loadattr(Scope *scope) {
+    //
+}
+
+void op_storeattr(Scope *scope) {
+    //
 }
 
 void closure_call(Scope *scope, Value close_val, size_t call_arity) {
