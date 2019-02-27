@@ -1,19 +1,12 @@
 #include "dis.h"
 
-#define OP(op) \
-    case OP_##op: {    \
-        (*ip)++;          \
-        printf(#op);   \
-        putchar('\n'); \
-        break;         \
-    }
-
 void dis(Chunk *chunk) {
     uint8_t *ip = chunk->code;
     while (ip != vector_end(chunk->code))
         dis_instr(&ip, chunk);
 }
 
+#define SIMPLE(op) case OP_##op: {(*ip)++; puts(#op); break;}
 void dis_instr(uint8_t **ip, Chunk *chunk) {
     printf("@%lu: ", *ip-chunk->code);
     switch (**ip) {
@@ -29,41 +22,13 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             printf("JMP @%lu\n", (*ip-chunk->code)+chunk->consts->jumps[number]);
             break;
         }
-        case OP_NEG: {
-            (*ip)++;
-            puts("NEG");
-            break;
-        }
-        case OP_LT: {
-            (*ip)++;
-            puts("LT");
-            break;
-        }
-        case OP_LTE: {
-            (*ip)++;
-            puts("LTE");
-            break;
-        }
-        case OP_GT: {
-            (*ip)++;
-            puts("GT");
-            break;
-        }
-        case OP_GTE: {
-            (*ip)++;
-            puts("GTE");
-            break;
-        }
-        case OP_EQU: {
-            (*ip)++;
-            puts("EQU");
-            break;
-        }
-        case OP_IS: {
-            (*ip)++;
-            puts("IS");
-            break;
-        }
+        SIMPLE(NEG)
+        SIMPLE(LT)
+        SIMPLE(LTE)
+        SIMPLE(GT)
+        SIMPLE(GTE)
+        SIMPLE(EQU)
+        SIMPLE(IS)
         case OP_STORE: {
             (*ip)++;
             printf("STORE ");
@@ -73,31 +38,15 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             putchar('\n');
             break;
         }
-        case OP_PUTS: {
-            printf("PUTS\n");
-            (*ip)++;
-            break;
-        }
-        case OP_PRINT: {
-            printf("PRINT\n");
-            (*ip)++;
-            break;
-        }
-        case OP_POP_TOP: {
-            printf("POP\n");
-            (*ip)++;
-            break;
-        }
+        SIMPLE(PUTS)
+        SIMPLE(PRINT)
+        SIMPLE(POP_TOP)
         case OP_CALL: {
             (*ip)++;
             printf("CALL %lu\n", extract_number(ip));
             break;
         }
-        case OP_RETURN: {
-            (*ip)++;
-            puts("RETURN");
-            break;
-        }
+        SIMPLE(RETURN)
         case OP_CONST_STORE: {
             (*ip)++;
             printf("CSTORE ");
@@ -111,11 +60,11 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             puts(")");
             break;
         }
-        OP(ADD)
-        OP(MUL)
-        OP(MOD)
-        OP(DIV)
-        OP(SUB)
+        SIMPLE(ADD)
+        SIMPLE(MUL)
+        SIMPLE(MOD)
+        SIMPLE(DIV)
+        SIMPLE(SUB)
         case OP_PUSH: {
             (*ip)++;
             printf("PUSH ");
@@ -135,8 +84,7 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
         }
         case OP_BIND: {
             (*ip)++;
-            extract_number(ip);
-            puts("BIND {CLOSURE}");
+            printf("BIND {CLOSURE} (%lu)\n", extract_number(ip));
             break;
         }
         default: {

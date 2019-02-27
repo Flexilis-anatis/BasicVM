@@ -1,6 +1,7 @@
 #include "scanner.h"
 #include "vec/vector.h"
 #include <string.h>
+#include <stdio.h> // fprintf(stderr, ...)
 
 Source init_source(const char *source) {
     Source s;
@@ -46,6 +47,11 @@ static Token parse_ident(Source *source) {
         case 'a':
             return match_kwd("nd", 2, source, TOK_AND);
         case 'c':
+            if (source->end - source->start == 5) {
+                if (*(source->start+2) == 'a')
+                    return match_kwd("lass", 4, source, TOK_CLASS);
+                return token(TOK_IDENT, source);
+            }
             return match_kwd("losure", 6, source, TOK_CLOSURE);
         case 'e':
             return match_kwd("lse", 3, source, TOK_ELSE);
@@ -60,6 +66,8 @@ static Token parse_ident(Source *source) {
         case 'n':
             if (*(source->start+1) == 'i')
                 return match_kwd("il", 2, source, TOK_NIL);
+            else if (*(source->start+1) == 'e')
+                return match_kwd("ew", 2, source, TOK_NEW);
             return match_kwd("ot", 2, source, TOK_NOT);
         case 'o':
             return match_kwd("r", 1, source, TOK_OR);
@@ -90,6 +98,7 @@ static Token parse_other(Source *source) {
         CASE(',', COMMA);
         CASE('{', LBRACE);
         CASE('}', RBRACE);
+        CASE('.', DOT);
         case '<':
             if (*source->end == '=') {
                 ++source->end;
@@ -114,7 +123,7 @@ static Token parse_other(Source *source) {
 }
 #undef CASE
 
-Token parse_string(Source *source) {
+static Token parse_string(Source *source) {
     ++source->start;
     char last = '\0';
     do
@@ -128,6 +137,24 @@ Token parse_string(Source *source) {
     return t;
 }
 
+static void parse_line_comment(Source *source) {
+    while (*++source->end != '\n' && *source->end != '\0');
+}
+
+static void parse_multiline_comment(Source *source) {
+    do {
+        while (*++source->end != '*')
+            if (*source->end == '\0')
+                goto end;
+    } while (*++source->end != '/' && *source->end != '\0');
+end:
+    if (*source->end == '\0') {
+        fprintf(stderr, "Unterminated multi-line comment\n");
+        exit(17); // random, I'll admit
+    }
+    ++source->end;
+}
+
 static Token get_next_token(Source *source) {
     source->start = source->end;
 
@@ -139,10 +166,17 @@ static Token get_next_token(Source *source) {
     if (*source->end == '\0')
         return token(TOK_EOF, source);
 
-    if (*source->end == '"')
+    if (*source->end == '"') {
         return parse_string(source);
-    else if (ISDIGIT(*source->end))
+    } else if (ISDIGIT(*source->end)) {
         return parse_number(source);
+    } else if (*source->end == '/') {
+        if (*(source->end+1) == '/')
+            parse_line_comment(source);
+        else if (*(source->end+1) == '*')
+            parse_multiline_comment(source);
+        return get_next_token(source);
+    }
     return parse_other(source);
 }
 

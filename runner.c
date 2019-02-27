@@ -130,6 +130,10 @@ InterpStat run_next(Scope *scope) {
             op_is(scope);
             break;
 
+        case OP_NEW:
+            op_new(scope);
+            break;
+
         case OP_COND_JMP:
             op_cond_jmp(scope);
             break;

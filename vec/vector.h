@@ -42,14 +42,14 @@ interface:
 #define VECTOR_H_
 
 #ifndef GROWTH_FACTOR
-  #ifdef LINEAR_GROWTH
-    #define GROWTH_FACTOR 1
-  #else
-    #define GROWTH_FACTOR 2
-	#ifndef MIN_CAPACITY
-	  #define MIN_CAPACITY 8
-	#endif
-  #endif
+ #ifdef LINEAR_GROWTH
+  #define GROWTH_FACTOR 1
+ #else
+  #define GROWTH_FACTOR 2
+ #endif
+#endif
+#if !defined(LINEAR_GROWTH) && !defined(MIN_CAPACITY)
+ #define MIN_CAPACITY 8
 #endif
 
 #include <stddef.h> /* for size_t */

@@ -1,6 +1,7 @@
 #include "value.h"
 #include "func.h"
 #include "closure.h"
+#include "class.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -12,10 +13,10 @@ static char *strdup(const char *s) {
 }
 
 #define DOUBLE_MAX_PRINT_SIZE 1000
-#define DOUBLE_PRECISION "15"
+// Prints 15 digits at most. Does not print trailing zeros
 static void print_double(double num) {
     char *buffer = calloc(DOUBLE_MAX_PRINT_SIZE, 1);
-    sprintf(buffer, "%." DOUBLE_PRECISION "f", num);
+    sprintf(buffer, "%.15f", num);
     size_t i;
     for (i = DOUBLE_MAX_PRINT_SIZE;
          i > 0 &&
@@ -24,10 +25,14 @@ static void print_double(double num) {
          --i);
 
     char *new = calloc(DOUBLE_MAX_PRINT_SIZE, 1);
+    size_t erase_ind = 0;
     while (i > 0) {
+        ++erase_ind;
         --i;
         new[i] = buffer[i];
     }
+    if (new[erase_ind-1] == '.')
+        new[erase_ind-1] = '\0';
     printf("%s", new);
     free(buffer);
     free(new);
@@ -51,6 +56,22 @@ void print_value(Value value) {
         case TYPE_CLOSURE:
             printf("{CLOSURE}");
             break;
+        case TYPE_CLASS: {
+            printf("{CLASS '");
+            Class *cls = VAL_AS(value, Class *);
+            for (const char *c = cls->name.start; c != cls->name.end; ++c)
+                putchar(*c);
+            printf("'}");
+            break;
+        }
+        case TYPE_INSTANCE: {
+            printf("{INSTOF '");
+            Class *cls = VAL_AS(value, Instance *)->cls;
+            for (const char *c = cls->name.start; c != cls->name.end; ++c)
+                putchar(*c);
+            printf("'}");
+            break;
+        }
         case TYPE_NIL:
             printf("nil");
             break;
@@ -95,6 +116,12 @@ void free_value(Value val) {
             case TYPE_CLOSURE:
                 free_closure(VAL_AS(val, Closure *));
                 break;
+            case TYPE_CLASS:
+                free_class(VAL_AS(val, Class *));
+                break;
+            case TYPE_INSTANCE:
+                free_instance(VAL_AS(val, Instance *));
+                break;
         }
     }
 }
@@ -104,12 +131,11 @@ bool value_true(Value val) {
         switch(GET_TYPE(val)) {
         case TYPE_STRING:
             return *VAL_AS(val, const char *) != '\0';
-        case TYPE_TRUE:
-        case TYPE_FUNC:
-        case TYPE_CLOSURE:
-            return true;
-        default:
+        case TYPE_NIL:
+        case TYPE_FALSE:
             return false;
+        default:
+            return true;
         }
     } else {
         return val.d != 0;
@@ -147,6 +173,20 @@ Value copy_val(Value source) {
                 Closure *copy = copy_closure(VAL_AS(source, Closure *));
                 source.p = 0;
                 SET_TYPE(source, TYPE_CLOSURE);
+                SET_VALUE(source, copy);
+                return source;
+            }
+            case TYPE_CLASS: {
+                Class *copy = copy_class(VAL_AS(source, Class *));
+                source.p = 0;
+                SET_TYPE(source, TYPE_CLASS);
+                SET_VALUE(source, copy);
+                return source;
+            }
+            case TYPE_INSTANCE: {
+                Instance *copy = copy_instance(VAL_AS(source, Instance *));
+                source.p = 0;
+                SET_TYPE(source, TYPE_INSTANCE);
                 SET_VALUE(source, copy);
                 return source;
             }

@@ -48,11 +48,11 @@ int main(int argc, char **argv) {
                         continue;
                     switch(GET_TYPE(v)) {
                     case TYPE_CLOSURE:
-                        printf("Closure");
+                        printf("(%lu) Closure", i);
                         f = VAL_AS(v, Closure *)->func;
                         break;
                     case TYPE_FUNC:
-                        printf("Function");
+                        printf("(%lu) Function", i);
                         f = VAL_AS(v, Func *);
                         break;
                     default:

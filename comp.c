@@ -56,7 +56,24 @@ static void parse_call(Chunk *chunk, Source *source) {
 
         emit_byte(chunk, OP_CALL);
         emit_number(chunk, arity);
+    } else {
+        return;
     }
+
+    parse_call(chunk, source);
+}
+
+static void parse_new(Chunk *chunk, Source *source) {
+    Lex ident = next_token(source).lex;
+
+    emit_byte(chunk, OP_LOAD);
+    emit_ident(chunk, ident);
+    emit_byte(chunk, OP_NEW);
+
+    if (peek_token(source).id != TOK_LPAREN)
+        ERROR("Expected left parenthesis for constructor call.\n", 17);
+
+    parse_call(chunk, source);
 }
 
 static void parse_atom(Chunk *chunk, Source *source) {
@@ -98,6 +115,11 @@ static void parse_atom(Chunk *chunk, Source *source) {
         consume(source);
         emit_byte(chunk, OP_PUSH);
         emit_constant(chunk, nil_val());
+        break;
+
+    case TOK_NEW:
+        consume(source);
+        parse_new(chunk, source);
         break;
 
     default:
@@ -167,7 +189,7 @@ static void parse_addition_no_lhs(Chunk *chunk, Source *source) {
 
     EXPR(PREC_ADD+1);
     emit_byte(chunk, op);
-    EXPR(PREC_ADD+1);
+    EXPR(PREC_NONE);
 }
 
 static void parse_addition(Chunk *chunk, Source *source) {
@@ -204,13 +226,22 @@ static void parse_log2(Chunk *chunk, Source *source) {
 
 static void parse_log1(Chunk *chunk, Source *source) {
     EXPR(PREC_LOG1+1);
-    if (match_token(source, TOK_AND)) {
-        EXPR(PREC_LOG1);
-        emit_byte(chunk, OP_AND);
-    } else if (match_token(source, TOK_OR)) {
-        EXPR(PREC_LOG1);
-        emit_byte(chunk, OP_OR);
+    uint8_t op;
+    switch (peek_token(source).id) {
+    case TOK_AND:
+        op = OP_AND;
+        break;
+    case TOK_OR:
+        op = OP_OR;
+        break;
+    default:
+        return;
     }
+    consume(source);
+
+    EXPR(PREC_LOG1+1);
+    emit_byte(chunk, op);
+    EXPR(PREC_NONE);
 }
 
 #define EXPR_ENDER(id) ((id) == TOK_SEMICOLON || (id) == TOK_RPAREN || (id) == TOK_COMMA)
@@ -369,11 +400,12 @@ static bool whilestmt(Chunk *chunk, Source *source) {
         REQUIRE(TOK_LPAREN, "Expected left parenthesis for while-loop", 50);
         size_t start = vector_size(chunk->code);
         EXPR(PREC_NONE);
-        //size_t data_len = vector_size(chunk->code)-start;
         REQUIRE(TOK_RPAREN, "Expected right parenthesis for while-loop", 51);
 
         emit_byte(chunk, OP_COND_JMP);
+        size_t jump = vector_size(chunk->code);
         emit_max_jump(chunk);
+        size_t data_len = vector_size(chunk->code)-jump;
 
         size_t start_body = vector_size(chunk->code);
         parse_block(chunk, source);
@@ -383,27 +415,29 @@ static bool whilestmt(Chunk *chunk, Source *source) {
         size_t body_len = vector_size(chunk->code)-start_body;
         size_t const_len = vector_size(chunk->code)-const_emit;
 
-        //size_t index = 
         jump_ind(chunk, body_len);
         while (const_len--)
             vector_pop_back(chunk->code);
         emit_number(chunk, jump_ind(chunk, start-vector_size(chunk->code)-1));
 
-        //size_t index = jump_ind(chunk, body_len);
-        /*{
+        size_t index = jump_ind(chunk, body_len);
+        {
             Chunk tmp = empty_chunk(chunk->consts);
             emit_number(&tmp, index);
             // Zero out old data
-            for (size_t i = 0; i < data_len; ++i)
-                chunk->code[start+i] = 0;
+            for (size_t i = 0; i < data_len; ++i) {
+                puts("Zeroing byte");
+                chunk->code[jump+i] = 0;
+            }
 
             // Write in new data
             for (size_t i = vector_size(tmp.code); i > 0; --i) {
-                chunk->code[start+i-1] = tmp.code[i-1];
+                puts("Writing byte");
+                chunk->code[jump+i-1] = tmp.code[i-1];
             }
 
             vector_free(tmp.code);
-        }*/
+        }
 
         return true;
     }

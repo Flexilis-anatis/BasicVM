@@ -24,6 +24,7 @@ F(is);
 F(not);
 F(and);
 F(or);
+F(new);
 F(print);
 F(puts);
 F(const_jmp);

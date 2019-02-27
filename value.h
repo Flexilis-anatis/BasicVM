@@ -35,7 +35,8 @@
 #define SET_TYPE(vl,to) ((vl).p=((vl.p)&~TYPE_MASK)|NAN_MASK|(((uint64_t)(to))<<48))
 
 typedef enum {
-    TYPE_TRUE, TYPE_FALSE, TYPE_NIL, TYPE_STRING, TYPE_FUNC, TYPE_CLOSURE
+    TYPE_TRUE, TYPE_FALSE, TYPE_NIL, TYPE_STRING, TYPE_FUNC, TYPE_CLOSURE,
+    TYPE_CLASS, TYPE_INSTANCE
 } Type;
 
 typedef union {
@@ -47,13 +48,31 @@ typedef struct {
     const char *start, *end;
 } String;
 
+// Print a value. Nothing printed at end.
 void print_value(Value value);
-bool same_object(Value v1, Value v2); // this is only true if they actually point to the same memory location
-bool same_value(Value v1, Value v2); // this is true if the values and types are both the same
+
+// this is only true if they actually point to the same memory location
+bool same_object(Value v1, Value v2);
+// this is true if the values and types are both the same 
+bool same_value(Value v1, Value v2);
+
+// Construct a number val
 Value double_val(double val);
+
+// Free a value
 void free_value(Value value);
+
+// Test if the value is truthy
 bool value_true(Value value);
+
+// Construct a value from a bool
 Value bool_value(bool cond);
+
+// Make a string. Must be malloc'd
 Value string_val(char *string);
+
+// Copy a value
 Value copy_val(Value source);
+
+// Get nil value
 Value nil_val(void);

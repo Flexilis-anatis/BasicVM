@@ -3,14 +3,11 @@
 #include "token.h"
 #include "func.h"
 #include "closure.h"
+#include "class.h"
 #include "runner.h"
 #include <math.h>
 #include <assert.h>
 #include <string.h>
-
-#ifdef DEBUG_RUNNER
-#include "dis.h"
-#endif
 
 #define RUNTIME_ERROR(m,c) \
     do {                                   \
@@ -80,6 +77,12 @@ void op_puts(Scope *scope) {
     putchar('\n');
 }
 
+static Lex get_ident(Scope *scope) {
+    size_t ident_key = extract_number(&scope->ip);
+    Lex ident = scope->chunk->consts->idents[ident_key];
+    return ident;
+}
+
 void op_const_jmp(Scope *scope) {
     uint8_t *start = scope->ip;
     unsigned long index = extract_number(&scope->ip);
@@ -102,12 +105,6 @@ void op_cond_jmp(Scope *scope) {
 static void store(Scope *scope, Lex ident, Value value) {
     size_t size = ident.end-ident.start;
     ht_insert(scope->local_vars, ident.start, size, value);
-}
-
-static Lex get_ident(Scope *scope) {
-    size_t ident_key = extract_number(&scope->ip);
-    Lex ident = scope->chunk->consts->idents[ident_key];
-    return ident;
 }
 
 void op_store(Scope *scope) {
@@ -176,6 +173,13 @@ void func_call(Scope *scope, Value func_val, size_t call_arity) {
     free_scope(fscope);
     vector_free(func->params);
     free(func);
+}
+
+void op_new(Scope *scope) {
+    Value cls_val = pop(scope);
+    Class *cls = VAL_AS(cls_val, Class *); 
+    push_val(scope, copy_val(cls->new_func));
+    free_class(cls);
 }
 
 void closure_call(Scope *scope, Value close_val, size_t call_arity) {

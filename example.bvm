@@ -1,0 +1,59 @@
+// First class functions/closures. Closures are far more expensive than functions.
+makeGreeter = function(greeting) {
+    return closure(name) {
+        print greeting, name;
+    };
+};
+
+hello = makeGreeter("Hello,");
+
+hello("John Doe");
+
+// Assignments pass values
+hello(name = "Jane Doe");
+print "Goodbye,", name;
+
+// Difference between function's and closures:
+x = 10;
+func = function() {
+    return x;
+};
+close = closure() {
+    return x;
+};
+x = 5;
+print "Function:", func(); // prints 5
+print "Closure:", close(); // prints 10
+/* 
+ * Closures store the environment, whereas function's look it up dynamically,
+ * making them more light weight. A side effect of this is that, sadly,
+ * closures can't be recursive with my current scheme.
+ */
+
+// Classes are a series of declarations, with special syntax
+// ('new function' or 'new closure') for the initializer
+class MyClass {
+    new function (self) {
+        self._test = 5;
+    };
+
+    getTest = function (self) {
+        return self._test;
+    };
+
+    // Returns truthy on success
+    setTest = function (self, val) {
+        if (val == 0)
+            return false;
+        return self._test = val;
+    };
+}
+
+instance = new MyClass();
+
+// braces are optional for single statements. Else if's are really just
+// else statements encapsulating the single statement 'if'
+if (instance.setTest(4))
+    print "Succeeded.";
+else
+    print "Failed.";

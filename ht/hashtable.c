@@ -51,7 +51,7 @@ hash_entry *he_create(const char *key, size_t key_size, Value value);
 /// @brief Destroys the hash entry and frees all associated memory.
 /// @param flags The hash table flags.
 /// @param hash_entry A pointer to the hash entry.
-void he_destroy(hash_entry *entry, void (*free_func)(void *));
+void he_destroy(hash_entry *entry);
 
 /// @brief Compare two hash entries.
 /// @param e1 A pointer to the first entry.
@@ -92,7 +92,7 @@ hash_table ht_copy(hash_table *source, Value(*copy_func)(Value)) {
 // HashTable functions
 //-----------------------------------
 
-void ht_init(hash_table *table, double max_load_factor, void (*free_func)(void *))
+void ht_init(hash_table *table, double max_load_factor)
 {
     table->hashfunc_x86_32  = MurmurHash3_x86_32;
     table->hashfunc_x86_128 = MurmurHash3_x86_128;
@@ -106,8 +106,6 @@ void ht_init(hash_table *table, double max_load_factor, void (*free_func)(void *
     table->flags                = 0;
     table->max_load_factor      = max_load_factor;
     table->current_load_factor  = 0.0;
-
-    table->free_func = free_func;
 
     unsigned int i;
     for(i = 0; i < table->array_size; i++)
@@ -130,7 +128,7 @@ void ht_destroy(hash_table *table)
 
         while(entry != NULL) {
             tmp = entry->next;
-            he_destroy(entry, table->free_func);
+            he_destroy(entry);
             entry = tmp;
         }
     }
@@ -191,7 +189,7 @@ void ht_insert_he(hash_table *table, hash_entry *entry){
         // if the keys are identical, throw away the old entry
         // and stick the new one into the table
         he_set_value(tmp, entry->value);
-        he_destroy(entry, table->free_func);
+        he_destroy(entry);
     }
     else
     {
@@ -263,7 +261,7 @@ void ht_remove(hash_table *table, const char *key, size_t key_size)
             if(prev != NULL)
               table->collisions--;
 
-            he_destroy(entry, table->free_func);
+            he_destroy(entry);
             return;
         }
         else
@@ -336,7 +334,7 @@ void ht_clear(hash_table *table)
 {
     ht_destroy(table);
 
-    ht_init(table, table->max_load_factor, table->free_func);
+    ht_init(table, table->max_load_factor);
 }
 
 unsigned int ht_index(hash_table *table, const char *key, size_t key_size)
@@ -418,9 +416,9 @@ hash_entry *he_create(const char *key, size_t key_size, Value value)
     return entry;
 }
 
-void he_destroy(hash_entry *entry, void(*free_func)(void *))
+void he_destroy(hash_entry *entry)
 {
-    free_func(&entry->value);
+    free_value(entry->value);
     free(entry);
 }
 
