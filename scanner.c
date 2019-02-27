@@ -43,18 +43,32 @@ static Token parse_ident(Source *source) {
         ++source->end;
 
     switch (*source->start) {
-        case 'p':
-            return match_kwd("rint", 4, source, TOK_PRINT);
-        case 'i':
-            return match_kwd("f", 1, source, TOK_IF);
+        case 'a':
+            return match_kwd("nd", 2, source, TOK_AND);
+        case 'c':
+            return match_kwd("losure", 6, source, TOK_CLOSURE);
         case 'e':
             return match_kwd("lse", 3, source, TOK_ELSE);
         case 'f':
+            if (*(source->start+1) == 'a')
+                return match_kwd("alse", 4, source, TOK_FALSE);
             return match_kwd("unction", 7, source, TOK_FUNCTION);
+        case 'i':
+            if (*(source->start+1) == 's')
+                return match_kwd("s", 1, source, TOK_IS);
+            return match_kwd("f", 1, source, TOK_IF);
+        case 'n':
+            if (*(source->start+1) == 'i')
+                return match_kwd("il", 2, source, TOK_NIL);
+            return match_kwd("ot", 2, source, TOK_NOT);
+        case 'o':
+            return match_kwd("r", 1, source, TOK_OR);
+        case 'p':
+            return match_kwd("rint", 4, source, TOK_PRINT);
         case 'r':
             return match_kwd("eturn", 5, source, TOK_RETURN);
-        case 'c':
-            return match_kwd("losure", 6, source, TOK_CLOSURE);
+        case 't':
+            return match_kwd("rue", 3, source, TOK_TRUE);
         case 'w':
             return match_kwd("hile", 4, source, TOK_WHILE);
     }
@@ -73,11 +87,27 @@ static Token parse_other(Source *source) {
         CASE('/', DIV);
         CASE('%', MOD);
         CASE(';', SEMICOLON);
-        CASE('=', ASSIGN);
         CASE(',', COMMA);
         CASE('{', LBRACE);
         CASE('}', RBRACE);
-        CASE('<', LT);
+        case '<':
+            if (*source->end == '=') {
+                ++source->end;
+                return token(TOK_LTE, source);
+            }
+            return token(TOK_LT, source);
+        case '>':
+            if (*source->end == '=') {
+                ++source->end;
+                return token(TOK_GTE, source);
+            }
+            return token(TOK_GT, source);
+        case '=':
+            if (*source->end == '=') {
+                ++source->end;
+                return token(TOK_EQU, source);
+            }
+            return token(TOK_ASSIGN, source);
         default:
             return parse_ident(source);
     }

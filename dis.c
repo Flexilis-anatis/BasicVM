@@ -39,6 +39,31 @@ void dis_instr(uint8_t **ip, Chunk *chunk) {
             puts("LT");
             break;
         }
+        case OP_LTE: {
+            (*ip)++;
+            puts("LTE");
+            break;
+        }
+        case OP_GT: {
+            (*ip)++;
+            puts("GT");
+            break;
+        }
+        case OP_GTE: {
+            (*ip)++;
+            puts("GTE");
+            break;
+        }
+        case OP_EQU: {
+            (*ip)++;
+            puts("EQU");
+            break;
+        }
+        case OP_IS: {
+            (*ip)++;
+            puts("IS");
+            break;
+        }
         case OP_STORE: {
             (*ip)++;
             printf("STORE ");

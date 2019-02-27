@@ -3,11 +3,12 @@
 #include "token.h"
 #include "ht/hashtable.h"
 
-typedef struct _sSCope {
+typedef struct _sScope *ScopePtr;
+typedef struct _sScope {
     vector(Value) stack;
     hash_table *local_vars;
 
-    struct _sScope *parent;
+    ScopePtr parent;
 
     Chunk *chunk;
     uint8_t *ip;

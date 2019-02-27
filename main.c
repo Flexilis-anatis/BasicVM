@@ -4,8 +4,7 @@
 #include "func.h"
 #include "closure.h"
 #include <stdio.h>
-#include <readline/readline.h>
-#include "asm.h"
+#include <string.h>
 
 char *readfile(char *filename) {
     FILE *f = fopen(filename, "rb");
@@ -45,6 +44,8 @@ int main(int argc, char **argv) {
                 for (size_t i = 0; i < vector_size(chunk.consts->data); ++i) {
                     Func *f;
                     Value v = chunk.consts->data[i];
+                    if (!IS_POINTER(v))
+                        continue;
                     switch(GET_TYPE(v)) {
                     case TYPE_CLOSURE:
                         printf("Closure");

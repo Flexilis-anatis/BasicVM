@@ -56,6 +56,17 @@ OPER_FN(div, d /= y.d)
 OPER_FN(mod, d = fmod(x->d, y.d))
 #define LOG_FN(name,op) OPER_FN(name, p = bool_value(x->d op y.d).p)
 LOG_FN(lt, <)
+LOG_FN(lte, <=)
+LOG_FN(gt, >)
+LOG_FN(gte, >=)
+OPER_FN(equ, p = bool_value(same_value(*x, y)).p)
+OPER_FN(is, p = bool_value(same_object(*x, y)).p)
+OPER_FN(and, p = bool_value(value_true(*x) && value_true(y)).p)
+OPER_FN(or, p = bool_value(value_true(*x) || value_true(y)).p)
+
+void op_not(Scope *scope) {
+    push_val(scope, bool_value(!value_true(pop(scope))));
+}
 
 void op_print(Scope *scope) {
     Value val = pop(scope);
@@ -70,12 +81,17 @@ void op_puts(Scope *scope) {
 }
 
 void op_const_jmp(Scope *scope) {
+    uint8_t *start = scope->ip;
     unsigned long index = extract_number(&scope->ip);
-    scope->ip += scope->chunk->consts->jumps[index];
+    long offset = scope->chunk->consts->jumps[index];
+    if (offset < 0) {
+        scope->ip = start+offset+1;
+    } else {
+        scope->ip += offset;
+    }
 }
 
 void op_cond_jmp(Scope *scope) {
-    size_t start = scope->ip-scope->chunk->code;
     Value cond = pop(scope);
     unsigned long index = extract_number(&scope->ip);
     if (!value_true(cond))
@@ -114,11 +130,11 @@ void op_load(Scope *scope) {
     Lex ident = get_ident(scope);
     size_t size = ident.end-ident.start;
 
-    Scope *cur_scope = scope;
+    ScopePtr cur_scope = scope;
     Value *result = NULL;
     while (result == NULL && cur_scope != NULL) {
         result = ht_get(cur_scope->local_vars, ident.start, size);
-        cur_scope = (Scope *)cur_scope->parent;
+        cur_scope = cur_scope->parent;
     }
 
     if (result == NULL)
@@ -130,7 +146,7 @@ void op_load(Scope *scope) {
 
 Scope *make_scope(size_t call_arity, Func *func, Scope *scope) {
     Scope *new_scope = init_scope(&func->chunk);
-    new_scope->parent = scope;
+    new_scope->parent = (ScopePtr)scope;
 
     assert(call_arity == func_arity(func));
     while (call_arity--) {
@@ -169,7 +185,7 @@ void closure_call(Scope *scope, Value close_val, size_t call_arity) {
     fscope->chunk = &closure->func->chunk;
     fscope->ip = fscope->chunk->code;
     fscope->local_vars = closure->ht;
-    fscope->parent = scope;
+    fscope->parent = (ScopePtr)scope;
     fscope->stack = NULL;
 
     assert(call_arity == func_arity(closure->func));

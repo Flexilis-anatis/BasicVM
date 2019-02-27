@@ -94,8 +94,40 @@ InterpStat run_next(Scope *scope) {
             op_mul(scope);
             break;
 
+        case OP_AND:
+            op_and(scope);
+            break;
+
+        case OP_OR:
+            op_or(scope);
+            break;
+
+        case OP_NOT:
+            op_not(scope);
+            break;
+
         case OP_LT:
             op_lt(scope);
+            break;
+
+        case OP_LTE:
+            op_lte(scope);
+            break;
+            
+        case OP_GT:
+            op_gt(scope);
+            break;
+            
+        case OP_GTE:
+            op_gte(scope);
+            break;
+        
+        case OP_EQU:
+            op_equ(scope);
+            break;
+            
+        case OP_IS:
+            op_is(scope);
             break;
 
         case OP_COND_JMP:

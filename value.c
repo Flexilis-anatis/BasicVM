@@ -11,6 +11,28 @@ static char *strdup(const char *s) {
     return d;
 }
 
+#define DOUBLE_MAX_PRINT_SIZE 1000
+#define DOUBLE_PRECISION "15"
+static void print_double(double num) {
+    char *buffer = calloc(DOUBLE_MAX_PRINT_SIZE, 1);
+    sprintf(buffer, "%." DOUBLE_PRECISION "f", num);
+    size_t i;
+    for (i = DOUBLE_MAX_PRINT_SIZE;
+         i > 0 &&
+             (buffer[i-1] == '0' || 
+              buffer[i-1] == '\0');
+         --i);
+
+    char *new = calloc(DOUBLE_MAX_PRINT_SIZE, 1);
+    while (i > 0) {
+        --i;
+        new[i] = buffer[i];
+    }
+    printf("%s", new);
+    free(buffer);
+    free(new);
+}
+
 void print_value(Value value) {
     if (IS_POINTER(value)) {
         switch (GET_TYPE(value)) {
@@ -34,12 +56,12 @@ void print_value(Value value) {
             break;
         }
     } else {
-        printf("%f", value.d);
+        print_double(value.d);
     }
 }
 
 bool same_object(Value v1, Value v2) {
-    return v1.d == v2.d;
+    return v1.p == v2.p;
 }
 
 bool same_value(Value v1, Value v2) {

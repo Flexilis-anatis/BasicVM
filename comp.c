@@ -60,20 +60,48 @@ static void parse_call(Chunk *chunk, Source *source) {
 }
 
 static void parse_atom(Chunk *chunk, Source *source) {
-    if (peek_token(source).id == TOK_NUMBER) {
+    switch (peek_token(source).id) {
+    case TOK_NUMBER: {
         Token numtok = next_token(source);
         double number = strtod(numtok.lex.start, NULL);
 
         emit_byte(chunk, OP_PUSH);
         emit_constant(chunk, double_val(number));
-    } else if (peek_token(source).id == TOK_STRING) {
+        break;
+    }
+
+    case TOK_STRING:
         emit_byte(chunk, OP_PUSH);
         emit_constant(chunk, string_val((char *)next_token(source).lex.start));
-    } else if (peek_token(source).id == TOK_IDENT) {
+        break;
+        
+    case TOK_IDENT:
         emit_byte(chunk, OP_LOAD);
         emit_ident(chunk, next_token(source).lex);
         parse_call(chunk, source);
         EXPR(PREC_NONE);
+        break;
+
+    case TOK_TRUE:
+        consume(source);
+        emit_byte(chunk, OP_PUSH);
+        emit_constant(chunk, bool_value(true));
+        break;
+
+    case TOK_FALSE:
+        consume(source);
+        emit_byte(chunk, OP_PUSH);
+        emit_constant(chunk, bool_value(false));
+        break;
+
+    case TOK_NIL:
+        consume(source);
+        emit_byte(chunk, OP_PUSH);
+        emit_constant(chunk, nil_val());
+        break;
+
+    default:
+        break;
     }
 }
 
@@ -90,6 +118,9 @@ static void parse_negate(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_SUB)) {
         EXPR(PREC_NEGATE);
         emit_byte(chunk, OP_NEG);
+    } else if (match_token(source, TOK_NOT)) {
+        EXPR(PREC_NONE);
+        emit_byte(chunk, OP_NOT);
     } else {
         EXPR(PREC_NEGATE+1);
     }
@@ -144,26 +175,42 @@ static void parse_addition(Chunk *chunk, Source *source) {
     parse_addition_no_lhs(chunk, source);
 }
 
+#define CASE(name) case TOK_##name: op = OP_##name; break
 static void parse_logic_no_lhs(Chunk *chunk, Source *source) {
     uint8_t op;
     switch (peek_token(source).id) {
-        case TOK_LT:
-            op = OP_LT;
-            break;
+        CASE(LT);
+        CASE(LTE);
+        CASE(GT);
+        CASE(GTE);
+        CASE(EQU);
+        CASE(IS);
         default:
             parse_addition_no_lhs(chunk, source);
             return;
     }
     consume(source);
 
-    EXPR(PREC_LOGIC+1);
+    EXPR(PREC_LOG2+1);
     emit_byte(chunk, op);
     EXPR(PREC_NONE);
- }
+}
+#undef CASE
 
-static void parse_logic(Chunk *chunk, Source *source) {
-    EXPR(PREC_LOGIC+1);
+static void parse_log2(Chunk *chunk, Source *source) {
+    EXPR(PREC_LOG2+1);
     parse_logic_no_lhs(chunk, source);
+}
+
+static void parse_log1(Chunk *chunk, Source *source) {
+    EXPR(PREC_LOG1+1);
+    if (match_token(source, TOK_AND)) {
+        EXPR(PREC_LOG1);
+        emit_byte(chunk, OP_AND);
+    } else if (match_token(source, TOK_OR)) {
+        EXPR(PREC_LOG1);
+        emit_byte(chunk, OP_OR);
+    }
 }
 
 #define EXPR_ENDER(id) ((id) == TOK_SEMICOLON || (id) == TOK_RPAREN || (id) == TOK_COMMA)
@@ -288,8 +335,11 @@ static void expression(Chunk *chunk, Source *source, Prec prec) {
         case PREC_CLOSURE:
             parse_closure(chunk, source);
             break;
-        case PREC_LOGIC:
-            parse_logic(chunk, source);
+        case PREC_LOG1:
+            parse_log1(chunk, source);
+            break;
+        case PREC_LOG2:
+            parse_log2(chunk, source);
             break;
         case PREC_ADD:
             parse_addition(chunk, source);
@@ -315,18 +365,45 @@ static void emit_max_jump(Chunk *chunk) {
 
 static bool whilestmt(Chunk *chunk, Source *source) {
     if (match_token(source, TOK_WHILE)) {
+        /// Need to rewrite data if it's a repeat
         REQUIRE(TOK_LPAREN, "Expected left parenthesis for while-loop", 50);
         size_t start = vector_size(chunk->code);
         EXPR(PREC_NONE);
+        //size_t data_len = vector_size(chunk->code)-start;
         REQUIRE(TOK_RPAREN, "Expected right parenthesis for while-loop", 51);
 
         emit_byte(chunk, OP_COND_JMP);
         emit_max_jump(chunk);
 
+        size_t start_body = vector_size(chunk->code);
         parse_block(chunk, source);
-
         emit_byte(chunk, OP_CONST_JMP);
-        emit_number(chunk, jump_ind(chunk, start-vector_size(chunk->code)));
+        size_t const_emit = vector_size(chunk->code);
+        emit_number(chunk, vector_size(chunk->consts->jumps)+1);
+        size_t body_len = vector_size(chunk->code)-start_body;
+        size_t const_len = vector_size(chunk->code)-const_emit;
+
+        //size_t index = 
+        jump_ind(chunk, body_len);
+        while (const_len--)
+            vector_pop_back(chunk->code);
+        emit_number(chunk, jump_ind(chunk, start-vector_size(chunk->code)-1));
+
+        //size_t index = jump_ind(chunk, body_len);
+        /*{
+            Chunk tmp = empty_chunk(chunk->consts);
+            emit_number(&tmp, index);
+            // Zero out old data
+            for (size_t i = 0; i < data_len; ++i)
+                chunk->code[start+i] = 0;
+
+            // Write in new data
+            for (size_t i = vector_size(tmp.code); i > 0; --i) {
+                chunk->code[start+i-1] = tmp.code[i-1];
+            }
+
+            vector_free(tmp.code);
+        }*/
 
         return true;
     }

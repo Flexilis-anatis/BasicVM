@@ -5,7 +5,7 @@ warnings="-Wextra -Wall -pedantic -Wno-implicit-fallthrough"
 name="bvm"
 opt="2"
 std="c17"
-linkage="-lm -lreadline"
+linkage="-lm"
 extra_flags=""
 # Will pass args to gcc
 exit `eval "gcc $files $warnings -std=$std -O$opt -o $name.out $linkage $extra_flags $*"`
